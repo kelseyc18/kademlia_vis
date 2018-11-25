@@ -1,6 +1,9 @@
 (() => {
   function dec2bin(dec) {
-    return (dec >>> 0).toString(2);
+    const raw = (dec >>> 0).toString(2);
+    const padding = "000000";
+    const withPadding = padding + raw;
+    return withPadding.substring(withPadding.length - padding.length);
   }
 
   // Returns the position of the provided SVG element.
@@ -27,18 +30,19 @@
       n,
       deg,
       group,
+      group3,
       id;
 
-    width = 600;
-    height = 600;
-    padding = 50;
+    width = 400;
+    height = 400;
+    padding = 20;
 
     n = 15;
     deg = 0;
 
     nodes = [];
     while (nodes.length < n) {
-      id = Math.floor(Math.random() * 256);
+      id = Math.floor(Math.random() * Math.pow(2, 6));
       if (!nodes.includes(id)) {
         nodes.push(id);
       }
@@ -64,6 +68,7 @@
       deg += 360 / n;
       circle.cx(0).cy(-radius);
       circle.attr("transform", "rotate(" + deg + ")");
+      circle.attr("node-id", nodes[i]);
       group.add(circle);
       circles.push(circle);
 
@@ -83,6 +88,80 @@
     }
   }
 
+  function render_tree() {
+    var draw, height, width, circle, group, children, n, newChildren, line;
+
+    height = 600;
+    width = 600;
+    padding = 10;
+
+    draw = SVG("binary-tree");
+    draw.size(height, width);
+
+    group = draw.group();
+
+    children = [];
+    n = Math.pow(2, 6);
+
+    // Draw leaves
+    for (i = 0; i < n; i++) {
+      circle = draw.circle(10);
+      circle.cx((width / (n + 1)) * (i + 1));
+      circle.cy(height - padding);
+      group.add(circle);
+      children.push(circle);
+    }
+
+    while (children.length > 1) {
+      newChildren = [];
+      for (i = 0; i < children.length - 1; i += 2) {
+        var child1_pos = getPos(draw.native(), children[i].native());
+        var child2_pos = getPos(draw.native(), children[i + 1].native());
+
+        // Draw parent
+        circle = draw.circle(10);
+        circle.cx((child1_pos.x + child2_pos.x) / 2);
+        circle.cy(child1_pos.y - (height - 2 * padding) / Math.log2(n));
+        group.add(circle);
+        newChildren.push(circle);
+
+        var parent_pos = getPos(draw.native(), circle.native());
+
+        // Draw edges between parent and children
+        line = draw
+          .line(child1_pos.x, child1_pos.y, parent_pos.x, parent_pos.y)
+          .stroke({ width: 2 });
+        group.add(line);
+        line = draw
+          .line(child2_pos.x, child2_pos.y, parent_pos.x, parent_pos.y)
+          .stroke({ width: 2 });
+        group.add(line);
+      }
+      if (newChildren.length === 1) {
+        label = draw.text("0");
+        label.x(
+          (child1_pos.x + parent_pos.x) / 2 - label.native().getBBox().width * 2
+        );
+        label.y(
+          (child1_pos.y + parent_pos.y) / 2 - label.native().getBBox().height
+        );
+        group.add(label);
+
+        label = draw.text("1");
+        label.x(
+          (child2_pos.x + parent_pos.x) / 2 + label.native().getBBox().width * 2
+        );
+        label.y(
+          (child2_pos.y + parent_pos.y) / 2 - label.native().getBBox().height
+        );
+        group.add(label);
+      }
+
+      children = newChildren;
+    }
+  }
+
   // Initialize the DHT diagram.
   render_graph();
+  render_tree();
 })(this);
