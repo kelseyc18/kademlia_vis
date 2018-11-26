@@ -22,10 +22,141 @@
     <nav class="navbar navbar-light bg-light">
       <a class="navbar-brand" href="#">Kademlia Visualization</a>
     </nav>
-    <div class="container">
+    <div class="kademlia-container">
       <div class="row">
-        <div class="col"><div id="drawing" class="text-center"></div></div>
-        <div class="col"><div id="binary-tree" class="text-center"></div></div>
+        <div class="col-auto">
+          <div
+            class="nav flex-column nav-pills"
+            id="v-pills-tab"
+            role="tablist"
+            aria-orientation="vertical"
+          >
+            <a
+              class="nav-link"
+              id="v-pills-background-tab"
+              data-toggle="pill"
+              href="#v-pills-background"
+              role="tab"
+              aria-controls="v-pills-background"
+              aria-selected="false"
+              >Background</a
+            >
+            <a
+              class="nav-link active"
+              id="v-pills-kbuckets-tab"
+              data-toggle="pill"
+              href="#v-pills-kbuckets"
+              role="tab"
+              aria-controls="v-pills-kbuckets"
+              aria-selected="true"
+              >K-Buckets</a
+            >
+            <a
+              class="nav-link"
+              id="v-pills-lookup-tab"
+              data-toggle="pill"
+              href="#v-pills-lookup"
+              role="tab"
+              aria-controls="v-pills-lookup"
+              aria-selected="false"
+              >Lookup</a
+            >
+            <a
+              class="nav-link"
+              id="v-pills-store-tab"
+              data-toggle="pill"
+              href="#v-pills-store"
+              role="tab"
+              aria-controls="v-pills-store"
+              aria-selected="false"
+              >Store</a
+            >
+            <a
+              class="nav-link"
+              id="v-pills-join-tab"
+              data-toggle="pill"
+              href="#v-pills-join"
+              role="tab"
+              aria-controls="v-pills-join"
+              aria-selected="false"
+              >Join</a
+            >
+            <a
+              class="nav-link"
+              id="v-pills-skademlia-tab"
+              data-toggle="pill"
+              href="#v-pills-skademlia"
+              role="tab"
+              aria-controls="v-pills-skademlia"
+              aria-selected="false"
+              >S/Kademlia</a
+            >
+          </div>
+        </div>
+        <div class="col">
+          <div class="tab-content" id="v-pills-tabContent">
+            <div
+              class="tab-pane fade"
+              id="v-pills-background"
+              role="tabpanel"
+              aria-labelledby="v-pills-background-tab"
+            >
+              This section gives an overview of important concepts in Kademlia
+              (e.g. using XOR metric to calculate distance).
+            </div>
+            <div
+              class="tab-pane fade show active"
+              id="v-pills-kbuckets"
+              role="tabpanel"
+              aria-labelledby="v-pills-kbuckets-tab"
+            >
+              <div class="row">
+                <div class="col">
+                  <div id="drawing" class="text-center"></div>
+                </div>
+                <div class="col">
+                  <div id="binary-tree" class="text-center"></div>
+                </div>
+              </div>
+            </div>
+            <div
+              class="tab-pane fade"
+              id="v-pills-lookup"
+              role="tabpanel"
+              aria-labelledby="v-pills-lookup-tab"
+            >
+              This section is an interactive visualization of the lookup
+              algorithm.
+            </div>
+            <div
+              class="tab-pane fade"
+              id="v-pills-store"
+              role="tabpanel"
+              aria-labelledby="v-pills-store-tab"
+            >
+              This section is an interactive visualization of the store
+              procedure.
+            </div>
+            <div
+              class="tab-pane fade"
+              id="v-pills-join"
+              role="tabpanel"
+              aria-labelledby="v-pills-join-tab"
+            >
+              This section is an interactive visualization of the join
+              procedure.
+            </div>
+            <div
+              class="tab-pane fade"
+              id="v-pills-skademlia"
+              role="tabpanel"
+              aria-labelledby="v-pills-skademlia-tab"
+            >
+              This section is an interactive visualization of the S/Kademlia
+              enhancements.
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
