@@ -1,8 +1,26 @@
 "use strict";
 
 var selectedNodeId = "";
-const treeEdges = [];
+const graphNodes = [];
+const graphEdges = [];
 const treeNodes = [];
+const treeEdges = [];
+
+const colors = [
+  "#EE6352",
+  "#FFB847",
+  "#0CCE6B",
+  "#C17FFF",
+  "#FF7FE3",
+  "#BBFF47"
+];
+
+const selectedNodeColor = "#00CBFF";
+const selectedPathColor = "#00CBFF";
+
+const noSelectedGraphNodeColor = "#EEE";
+const noSelectedColor = "#000";
+const noSelectedLightColor = "#AAA";
 
 (() => {
   function dec2bin(dec) {
@@ -32,14 +50,16 @@ const treeNodes = [];
       radius,
       draw,
       circle,
-      circles,
       i,
+      j,
       n,
       deg,
       group,
       group2,
+      pathGroup,
       label,
       label2,
+      line,
       nodes,
       id;
 
@@ -63,6 +83,8 @@ const treeNodes = [];
     draw.size(width, height);
     radius = width / 2 - padding * 2;
 
+    pathGroup = draw.group();
+    pathGroup.attr("id", "kademlia-paths");
     group = draw.group();
     group.translate(width / 2, height / 2);
     group.attr("id", "kademlia-nodes");
@@ -70,20 +92,19 @@ const treeNodes = [];
     group2.attr("id", "kademlia-labels");
 
     // Create the nodes.
-    circles = [];
     for (i = 0; i < n; i++) {
       var dataId = "0b" + dec2bin(nodes[i]);
 
       // Draw node circle
       circle = draw.circle(40);
-      circle.fill("#B5FFFC");
+      circle.fill(noSelectedGraphNodeColor);
       deg += 360 / n;
       circle.cx(0).cy(-radius);
       circle.attr("transform", "rotate(" + deg + ")");
       circle.attr("node-id", nodes[i]);
       circle.attr("data-id", dataId);
       group.add(circle);
-      circles.push(circle);
+      graphNodes.push(circle);
 
       var pos1 = getPos(draw.native(), circle.native());
 
@@ -108,6 +129,24 @@ const treeNodes = [];
       label2.mouseover(onNodeMouseOver);
       label2.mouseout(onNodeMouseOut);
     }
+
+    // Draw the paths
+    for (i = 0; i < n; i++) {
+      for (j = i + 1; j < n; j++) {
+        var startPos = getPos(draw.native(), graphNodes[i].native());
+        var endPos = getPos(draw.native(), graphNodes[j].native());
+        line = draw.line(startPos.x, startPos.y, endPos.x, endPos.y);
+        line.stroke({
+          color: noSelectedLightColor,
+          width: 1,
+          linecap: "round"
+        });
+        line.addClass(graphNodes[i].attr("data-id"));
+        line.addClass(graphNodes[j].attr("data-id"));
+        pathGroup.add(line);
+        graphEdges.push(line);
+      }
+    }
   }
 
   function render_tree() {
@@ -125,12 +164,12 @@ const treeNodes = [];
       newChildren,
       line;
 
-    height = 600;
+    height = 400;
     width = 600;
-    padding = 10;
+    padding = 75;
 
     draw = SVG("binary-tree");
-    draw.size(height, width);
+    draw.size(width, height);
 
     group2 = draw.group();
     group = draw.group();
@@ -207,22 +246,70 @@ const treeNodes = [];
     }
   }
 
+  function updateGraph() {
+    const offset = "0b".length;
+    for (var i = 0; i < graphNodes.length; i++) {
+      var node = graphNodes[i];
+      if (selectedNodeId === "") {
+        node.fill(noSelectedGraphNodeColor);
+      } else if (selectedNodeId === node.attr("data-id")) {
+        node.fill(selectedNodeColor);
+      } else {
+        var index = offset;
+        while (
+          index < selectedNodeId.length &&
+          selectedNodeId[index] === node.attr("data-id")[index]
+        ) {
+          index++;
+        }
+        node.fill(colors[index - offset]);
+      }
+    }
+
+    for (i = 0; i < graphEdges.length; i++) {
+      var edge = graphEdges[i];
+      var edgeClasses = edge.classes();
+      if (edgeClasses.includes(selectedNodeId)) {
+        var index = offset;
+        var otherNodeId;
+        for (var j = 0; j < edgeClasses.length; j++) {
+          if (
+            edgeClasses[j].startsWith("0b") &&
+            edgeClasses[j] !== selectedNodeId
+          ) {
+            otherNodeId = edgeClasses[j];
+            break;
+          }
+        }
+        while (
+          index < selectedNodeId.length &&
+          selectedNodeId[index] === otherNodeId[index]
+        ) {
+          index++;
+        }
+        edge.stroke({ color: colors[index - offset], width: 2 });
+      } else {
+        edge.stroke({ color: noSelectedLightColor, width: 1 });
+      }
+    }
+  }
+
   function updateTree() {
     for (var i = 0; i < treeNodes.length; i++) {
       var node = treeNodes[i];
       if (selectedNodeId.startsWith(node.attr("data-id"))) {
-        node.fill("#00CBFF");
+        node.fill(selectedNodeColor);
       } else {
-        node.fill("#000");
+        node.fill(noSelectedColor);
       }
     }
 
     for (i = 0; i < treeEdges.length; i++) {
       var edge = treeEdges[i];
       if (selectedNodeId.startsWith(edge.attr("data-id"))) {
-        edge.stroke({ color: "#B5FFFC", width: 10, linecap: "round" });
+        edge.stroke({ color: selectedPathColor, width: 10, linecap: "round" });
       } else {
-        edge.stroke({ color: "#000", width: 2, linecap: "round" });
+        edge.stroke({ color: noSelectedColor, width: 2, linecap: "round" });
       }
     }
   }
@@ -230,11 +317,13 @@ const treeNodes = [];
   function onNodeMouseOver(e) {
     selectedNodeId = e.target.getAttribute("data-id");
     updateTree();
+    updateGraph();
   }
 
   function onNodeMouseOut() {
     selectedNodeId = "";
     updateTree();
+    updateGraph();
   }
 
   // Initialize the DHT diagram.
