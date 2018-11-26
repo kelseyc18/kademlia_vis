@@ -228,7 +228,7 @@ const noSelectedLightColor = "#AAA";
           (child1Pos.x + parentPos.x) / 2 - label.native().getBBox().width * 2
         );
         label.y(
-          (child1Pos.y + parentPos.y) / 2 - label.native().getBBox().height
+          (child1Pos.y + parentPos.y) / 2 - label.native().getBBox().height - 3
         );
         group.add(label);
 
@@ -237,7 +237,7 @@ const noSelectedLightColor = "#AAA";
           (child2Pos.x + parentPos.x) / 2 + label.native().getBBox().width * 2
         );
         label.y(
-          (child2Pos.y + parentPos.y) / 2 - label.native().getBBox().height
+          (child2Pos.y + parentPos.y) / 2 - label.native().getBBox().height - 3
         );
         group.add(label);
       }
@@ -295,21 +295,46 @@ const noSelectedLightColor = "#AAA";
   }
 
   function updateTree() {
+    var index;
+    const offset = "0b".length;
+
     for (var i = 0; i < treeNodes.length; i++) {
       var node = treeNodes[i];
-      if (selectedNodeId.startsWith(node.attr("data-id"))) {
+      if (selectedNodeId === "") {
+        node.fill(noSelectedColor);
+      } else if (selectedNodeId.startsWith(node.attr("data-id"))) {
         node.fill(selectedNodeColor);
       } else {
-        node.fill(noSelectedColor);
+        index = offset;
+        while (
+          index < selectedNodeId.length &&
+          selectedNodeId[index] === node.attr("data-id")[index]
+        ) {
+          index++;
+        }
+        node.fill(colors[index - offset]);
       }
     }
 
     for (i = 0; i < treeEdges.length; i++) {
       var edge = treeEdges[i];
-      if (selectedNodeId.startsWith(edge.attr("data-id"))) {
+      if (selectedNodeId === "") {
+        edge.stroke({ color: noSelectedColor, width: 2, linecap: "round" });
+      } else if (selectedNodeId.startsWith(edge.attr("data-id"))) {
         edge.stroke({ color: selectedPathColor, width: 10, linecap: "round" });
       } else {
-        edge.stroke({ color: noSelectedColor, width: 2, linecap: "round" });
+        index = offset;
+        while (
+          index < selectedNodeId.length &&
+          selectedNodeId[index] === edge.attr("data-id")[index]
+        ) {
+          index++;
+        }
+        edge.stroke({
+          color: colors[index - offset],
+          width: 4,
+          linecap: "round"
+        });
       }
     }
   }
