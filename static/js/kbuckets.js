@@ -1,28 +1,28 @@
 "use strict";
 
-var selectedNodeId = "";
-const graphNodes = [];
-const graphEdges = [];
-const treeNodes = [];
-const treeEdges = [];
-
-const colors = [
-  "#EE6352",
-  "#FFB847",
-  "#0CCE6B",
-  "#C17FFF",
-  "#FF7FE3",
-  "#BBFF47"
-];
-
-const selectedNodeColor = "#00CBFF";
-const selectedPathColor = "#00CBFF";
-
-const noSelectedGraphNodeColor = "#EEE";
-const noSelectedColor = "#000";
-const noSelectedLightColor = "#AAA";
-
 (() => {
+  var selectedNodeId = "";
+  const graphNodes = [];
+  const graphEdges = [];
+  const treeNodes = [];
+  const treeEdges = [];
+
+  const colors = [
+    "#EE6352",
+    "#FFB847",
+    "#0CCE6B",
+    "#C17FFF",
+    "#FF7FE3",
+    "#BBFF47"
+  ];
+
+  const selectedNodeColor = "#00CBFF";
+  const selectedPathColor = "#00CBFF";
+
+  const noSelectedGraphNodeColor = "#EEE";
+  const noSelectedColor = "#000";
+  const noSelectedLightColor = "#AAA";
+
   function dec2bin(dec) {
     const raw = (dec >>> 0).toString(2);
     const padding = "000000";
@@ -79,7 +79,7 @@ const noSelectedLightColor = "#AAA";
     }
     nodes.sort((a, b) => a - b);
 
-    draw = SVG("drawing");
+    draw = SVG("graph");
     draw.size(width, height);
     radius = width / 2 - padding * 2;
 
@@ -112,14 +112,16 @@ const noSelectedLightColor = "#AAA";
       label = draw.plain(dec2bin(nodes[i]));
       label.x(pos1.x - label.native().getBBox().width / 2);
       label.y(pos1.y - 20);
-      label.native().setAttribute("data-id", dataId);
+      label.attr("data-id", dataId);
+      label.attr("font-family", "Roboto");
       group2.add(label);
 
       // Display node ID in decimal
       label2 = draw.plain("(" + nodes[i].toString() + ")");
       label2.x(pos1.x - label2.native().getBBox().width / 2);
       label2.y(pos1.y - 2);
-      label2.native().setAttribute("data-id", dataId);
+      label2.attr("data-id", dataId);
+      label2.attr("font-family", "Roboto");
       group2.add(label2);
 
       circle.mouseover(onNodeMouseOver);

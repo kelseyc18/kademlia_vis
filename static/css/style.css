@@ -1,0 +1,47 @@
+.kademlia-container {
+  margin-left: 10px;
+  margin-right: 10px;
+  margin-top: 10px;
+}
+
+.sidenav {
+  height: 100%;
+  width: 160px;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  margin-left: 4px;
+  margin-right: 4px;
+}
+
+.selected {
+  background-color: #007bff;
+  color: #fff !important;
+}
+
+.sidenav a {
+  padding: 8px 16px 8px 16px;
+  border-radius: 4px;
+  text-decoration: none;
+  color: #007bff;
+  display: block;
+}
+
+.sidenav a:hover {
+  color: #004a99;
+}
+
+.main {
+  margin-left: 160px; /* Same as the width of the sidenav */
+  font-size: 28px; /* Increased text to enable scrolling */
+  padding: 0px 10px;
+}
+
+@media screen and (max-height: 450px) {
+  .sidenav {
+    padding-top: 15px;
+  }
+  .sidenav a {
+    font-size: 18px;
+  }
+}
