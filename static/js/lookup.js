@@ -30,6 +30,8 @@
   const noSelectedColor = "#000";
   const noSelectedLightColor = "#AAA";
 
+  const idToFindTreeColor = "#133670";
+
   function dec2bin(dec) {
     const raw = (dec >>> 0).toString(2);
     const padding = "000000";
@@ -392,6 +394,15 @@
     }
   }
 
+  function updateTreeWithIdToFind() {
+    for (var i = 0; i < treeNodes.length; i++) {
+      const node = treeNodes[i];
+      if (node.attr("data-id") === idToFind) {
+        node.fill(idToFindTreeColor);
+      }
+    }
+  }
+
   function onNodeClicked(e) {
     if (originNodeId !== "") return;
     originNodeId = e.target.getAttribute("data-id");
@@ -414,12 +425,34 @@
             : "0b101111"
         );
 
-        // TODO: Validate ID and set to empty string if invalid
+        if (idToFind.startsWith(binaryPrefix)) {
+          for (var i = offset; i < idToFind.length; i++) {
+            if (
+              i >= "0b000000".length ||
+              (idToFind[i] !== "0" && idToFind[i] !== "1")
+            ) {
+              idToFind = "";
+              break;
+            }
+          }
+        } else {
+          if (idToFind < 0 || idToFind >= Math.pow(2, 6)) {
+            idToFind = "";
+          }
+        }
       }
 
+      if (!idToFind.startsWith(binaryPrefix)) {
+        idToFind = binaryPrefix + dec2bin(idToFind);
+      }
       document.getElementById(
         "message"
-      ).innerHTML = `<p>Looking up <b>ID ${idToFind}</b> from <b>Node ${originNodeId}</b>.</p>`;
+      ).innerHTML = `<p>Looking up <b>ID ${idToFind} (${parseInt(
+        idToFind.substring(binaryPrefix.length),
+        2
+      )})</b> from <b>Node ${originNodeId}</b>.</p>`;
+
+      updateTreeWithIdToFind();
     }, 1000);
   }
 
