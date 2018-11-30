@@ -4,12 +4,18 @@
   var selectedNodeId = "";
   var originNodeId = "";
   var idToFind = "";
+  var closestNode = "";
+  const alphaContacts = [];
+  const closestNodes = [];
+  const kBuckets = {};
+
   const graphNodes = [];
   const graphEdges = [];
   const treeNodes = [];
   const treeEdges = [];
-  const kBuckets = {};
   const k = 4;
+  const alpha = 3;
+  const kBucketRects = {};
 
   const binaryPrefix = "0b";
   const offset = binaryPrefix.length;
@@ -32,11 +38,34 @@
 
   const idToFindTreeColor = "#133670";
 
+  const bucketWidth = 90;
+  const bucketHeight = 60;
+
   function dec2bin(dec) {
     const raw = (dec >>> 0).toString(2);
     const padding = "000000";
     const withPadding = padding + raw;
     return withPadding.substring(withPadding.length - padding.length);
+  }
+
+  function bin2dec(bin) {
+    if (bin.startsWith(binaryPrefix)) {
+      return parseInt(bin.substring(binaryPrefix.length), 2);
+    } else {
+      return parseInt(bin, 2);
+    }
+  }
+
+  function getCommonPrefixLength(s1, s2, offset) {
+    var index = offset;
+    while (index < s1.length && s1[index] === s2[index]) {
+      index++;
+    }
+    return index - offset;
+  }
+
+  function getDistance(bin1, bin2) {
+    return bin2dec(bin1) ^ bin2dec(bin2);
   }
 
   // Returns the position of the provided SVG element.
@@ -45,10 +74,24 @@
 
     matrix = elem.getCTM();
     position = svg.createSVGPoint();
-    position.x = elem.getAttribute("cx");
-    position.y = elem.getAttribute("cy");
+    position.x =
+      elem.getAttribute("cx") !== null
+        ? elem.getAttribute("cx")
+        : elem.getAttribute("x");
+    position.y =
+      elem.getAttribute("cy") !== null
+        ? elem.getAttribute("cy")
+        : elem.getAttribute("y");
     position = position.matrixTransform(matrix);
     return position;
+  }
+
+  function idsToString(ids) {
+    const tokens = [];
+    ids.forEach(id => {
+      tokens.push(`${id} (${bin2dec(id)})`);
+    });
+    return tokens.join(", ");
   }
 
   // Renders the Kademlia graph.
@@ -268,14 +311,11 @@
       } else if (selectedNodeId === node.attr("data-id")) {
         node.fill(selectedNodeColor);
       } else {
-        var index = offset;
-        while (
-          index < selectedNodeId.length &&
-          selectedNodeId[index] === node.attr("data-id")[index]
-        ) {
-          index++;
-        }
-        const commonPrefixLength = index - offset;
+        const commonPrefixLength = getCommonPrefixLength(
+          selectedNodeId,
+          node.attr("data-id"),
+          offset
+        );
         node.fill(colors[commonPrefixLength]);
 
         if (
@@ -293,7 +333,6 @@
       var edge = graphEdges[i];
       var edgeClasses = edge.classes();
       if (edgeClasses.includes(selectedNodeId)) {
-        var index = offset;
         var otherNodeId;
         for (var j = 0; j < edgeClasses.length; j++) {
           if (
@@ -304,13 +343,11 @@
             break;
           }
         }
-        while (
-          index < selectedNodeId.length &&
-          selectedNodeId[index] === otherNodeId[index]
-        ) {
-          index++;
-        }
-        const commonPrefixLength = index - offset;
+        const commonPrefixLength = getCommonPrefixLength(
+          selectedNodeId,
+          otherNodeId,
+          offset
+        );
         edge.stroke({ color: colors[commonPrefixLength], width: 2 });
 
         if (
@@ -326,8 +363,6 @@
   }
 
   function updateTree() {
-    var index;
-
     for (var i = 0; i < treeNodes.length; i++) {
       var node = treeNodes[i];
       if (selectedNodeId === "") {
@@ -335,14 +370,12 @@
       } else if (selectedNodeId.startsWith(node.attr("data-id"))) {
         node.fill(selectedNodeColor);
       } else {
-        index = offset;
-        while (
-          index < selectedNodeId.length &&
-          selectedNodeId[index] === node.attr("data-id")[index]
-        ) {
-          index++;
-        }
-        node.fill(colors[index - offset]);
+        const commonPrefixLength = getCommonPrefixLength(
+          selectedNodeId,
+          node.attr("data-id"),
+          offset
+        );
+        node.fill(colors[commonPrefixLength]);
       }
     }
 
@@ -353,15 +386,13 @@
       } else if (selectedNodeId.startsWith(edge.attr("data-id"))) {
         edge.stroke({ color: selectedPathColor, width: 10, linecap: "round" });
       } else {
-        index = offset;
-        while (
-          index < selectedNodeId.length &&
-          selectedNodeId[index] === edge.attr("data-id")[index]
-        ) {
-          index++;
-        }
+        const commonPrefixLength = getCommonPrefixLength(
+          selectedNodeId,
+          edge.attr("data-id"),
+          offset
+        );
         edge.stroke({
-          color: colors[index - offset],
+          color: colors[commonPrefixLength],
           width: 4,
           linecap: "round"
         });
@@ -370,7 +401,7 @@
   }
 
   function updateKBuckets() {
-    var index, nodeId, otherNodeId;
+    var nodeId, otherNodeId;
 
     for (var i = 0; i < graphNodes.length; i++) {
       nodeId = graphNodes[i].attr("data-id");
@@ -378,13 +409,13 @@
       kBuckets[nodeId] = {};
       for (var j = 0; j < graphNodes.length; j++) {
         otherNodeId = graphNodes[j].attr("data-id");
+        if (otherNodeId === nodeId) continue;
 
-        index = offset;
-        while (index < nodeId.length && nodeId[index] === otherNodeId[index]) {
-          index++;
-        }
-
-        const commonPrefixLength = index - offset;
+        const commonPrefixLength = getCommonPrefixLength(
+          nodeId,
+          otherNodeId,
+          offset
+        );
         if (!(commonPrefixLength in kBuckets[nodeId])) {
           kBuckets[nodeId][commonPrefixLength] = [otherNodeId];
         } else if (kBuckets[nodeId][commonPrefixLength].length < k) {
@@ -392,6 +423,147 @@
         }
       }
     }
+  }
+
+  function drawKBuckets(svgId, titleId) {
+    var draw,
+      labelGroup,
+      label,
+      label2,
+      rectGroup,
+      rectangle,
+      xPos,
+      yPos,
+      highlightGroup,
+      highlightRect;
+
+    document.getElementById(
+      titleId
+    ).innerHTML = `<b>k-buckets for ${originNodeId}</b>`;
+
+    draw = SVG(svgId);
+    highlightGroup = draw.group();
+    rectGroup = draw.group();
+    labelGroup = draw.group();
+
+    const padding = 10;
+    const radius = 5;
+    draw.size((bucketWidth + 2 * padding) * k, (bucketHeight + padding) * 6);
+
+    const entries = Object.entries(kBuckets[originNodeId]);
+    entries.forEach(([commonPrefixLength, nodes]) => {
+      nodes.forEach((nodeId, nodeIndex) => {
+        xPos = nodeIndex * (bucketWidth + padding) + bucketWidth / 2 + padding;
+        yPos =
+          commonPrefixLength * (bucketHeight + padding) +
+          bucketHeight / 2 +
+          padding;
+
+        rectangle = draw
+          .rect(bucketWidth, bucketHeight)
+          .radius(radius)
+          .cx(xPos)
+          .cy(yPos)
+          .fill(colors[commonPrefixLength]);
+        rectGroup.add(rectangle);
+
+        if (idToFind !== "") {
+          if (
+            parseInt(commonPrefixLength) ===
+            getCommonPrefixLength(idToFind, originNodeId, offset)
+          ) {
+            highlightRect = draw
+              .rect(bucketWidth + padding, bucketHeight + padding)
+              .cx(xPos)
+              .cy(yPos)
+              .fill(idToFindTreeColor);
+            highlightGroup.add(highlightRect);
+
+            if (alphaContacts.length < alpha) {
+              alphaContacts.push(nodeId);
+            }
+          }
+        }
+
+        if (commonPrefixLength in kBucketRects) {
+          kBucketRects[commonPrefixLength].push(rectangle);
+        } else {
+          kBucketRects[commonPrefixLength] = [rectangle];
+        }
+
+        label = draw.text(nodeId);
+        label.x(xPos - label.bbox().width / 2);
+        label.y(yPos - label.bbox().height / 2 - padding);
+        label.attr("data-id", nodeId);
+        label.attr("font-family", "Roboto");
+        labelGroup.add(label);
+
+        label2 = draw.text(`(${bin2dec(nodeId)})`);
+        label2.x(xPos - label2.bbox().width / 2);
+        label2.y(yPos - label2.bbox().height / 2 + padding);
+        label2.attr("data-id", nodeId);
+        label2.attr("font-family", "Roboto");
+        labelGroup.add(label2);
+      });
+    });
+  }
+
+  function populateAlphaContacts() {
+    const buckets = Object.values(kBuckets[originNodeId]);
+    for (var i = 0; i < buckets.length; i++) {
+      for (var j = 0; j < buckets[i].length; j++) {
+        if (alphaContacts.length >= alpha) return;
+
+        if (!(buckets[i][j] in alphaContacts)) {
+          alphaContacts.push(buckets[i][j]);
+        }
+      }
+    }
+  }
+
+  function updateClosestNode() {
+    alphaContacts.forEach(nodeId => {
+      if (
+        closestNode === "" ||
+        getDistance(idToFind, closestNode) > getDistance(idToFind, nodeId)
+      ) {
+        closestNode = nodeId;
+      }
+    });
+  }
+
+  function populateLocalNodeInfo() {
+    populateAlphaContacts();
+    updateClosestNode();
+
+    const infoDiv = document.getElementById("local-node-info");
+    infoDiv.innerHTML = `<p>The first alpha (${alpha}) contacts are <b>${idsToString(
+      alphaContacts
+    )}</b>.</p>
+    <p><b>closestNode</b>, the contact closest to the target ID ${idToFind} (${bin2dec(
+      idToFind
+    )}), is <b>${closestNode} (${bin2dec(closestNode)}).</b></p>`;
+
+    $("#send-find-node-button").attr("style", "display: inline;");
+    $("#send-find-node-button").click(() => {
+      $("#find-node-modal").modal();
+    });
+    $("#find-node-modal").on("shown.bs.modal", () => {
+      populateModal();
+    });
+  }
+
+  function populateModal() {
+    document.getElementById(
+      "find-node-modal-body"
+    ).innerHTML = `<p><span><b>Requester:</b> ${originNodeId} (${bin2dec(
+      originNodeId
+    )})</span><br>
+    <span><b>Recipient:</b> ${alphaContacts[0]} (${bin2dec(
+      alphaContacts[0]
+    )})</span><br>
+    <span><b>Target ID:</b> ${idToFind} (${bin2dec(idToFind)})</span></p>`;
+    drawKBuckets("modal-kbuckets-svg", "modal-kbuckets-title");
   }
 
   function updateTreeWithIdToFind() {
@@ -408,52 +580,58 @@
     originNodeId = e.target.getAttribute("data-id");
     document.getElementById(
       "message"
-    ).innerHTML = `<p>You have selected Node <b>${originNodeId}</b> to originate the lookup.</p>`;
+    ).innerHTML = `<p>You have selected Node <b>${originNodeId} (${bin2dec(
+      originNodeId
+    )})</b> to originate the lookup.</p>`;
     document.getElementById("message2").innerHTML = `
-    <p>We will use system-wide parameters <b><i>k</i> = 4</b> and <b><i>alpha</i> = 2</b>.</p>
+    <p>We will use system-wide parameters <b><i>k</i> = ${k}</b> and <b><i>alpha</i> = ${alpha}</b>.</p>
     <p><i>k</i> represents the max number of nodes in each k-bucket. <i>alpha</i> is the concurrency parameter.</p>`;
     updateKBuckets();
     updateTree();
     updateGraph();
 
-    setTimeout(() => {
-      while (idToFind === "") {
-        idToFind = prompt(
-          "What ID would you like to look up (e.g. 0b101111 or 47)?",
-          originNodeId === "0b101111" || originNodeId === "47"
-            ? "0b101110"
-            : "0b101111"
-        );
+    // setTimeout(() => {
+    //   while (idToFind === "") {
+    //     idToFind = prompt(
+    //       "What ID would you like to look up (e.g. 0b101111 or 47)?",
+    //       originNodeId === "0b101111" || originNodeId === "47"
+    //         ? "0b101110"
+    //         : "0b101111"
+    //     );
 
-        if (idToFind.startsWith(binaryPrefix)) {
-          for (var i = offset; i < idToFind.length; i++) {
-            if (
-              i >= "0b000000".length ||
-              (idToFind[i] !== "0" && idToFind[i] !== "1")
-            ) {
-              idToFind = "";
-              break;
-            }
-          }
-        } else {
-          if (idToFind < 0 || idToFind >= Math.pow(2, 6)) {
-            idToFind = "";
-          }
-        }
-      }
+    //     if (idToFind.startsWith(binaryPrefix)) {
+    //       for (var i = offset; i < idToFind.length; i++) {
+    //         if (
+    //           i >= "0b000000".length ||
+    //           (idToFind[i] !== "0" && idToFind[i] !== "1")
+    //         ) {
+    //           idToFind = "";
+    //           break;
+    //         }
+    //       }
+    //     } else {
+    //       if (idToFind < 0 || idToFind >= Math.pow(2, 6)) {
+    //         idToFind = "";
+    //       }
+    //     }
+    //   }
 
-      if (!idToFind.startsWith(binaryPrefix)) {
-        idToFind = binaryPrefix + dec2bin(idToFind);
-      }
-      document.getElementById(
-        "message"
-      ).innerHTML = `<p>Looking up <b>ID ${idToFind} (${parseInt(
-        idToFind.substring(binaryPrefix.length),
-        2
-      )})</b> from <b>Node ${originNodeId}</b>.</p>`;
+    // if (!idToFind.startsWith(binaryPrefix)) {
+    //   idToFind = binaryPrefix + dec2bin(idToFind);
+    // }
+    // document.getElementById(
+    //   "message"
+    // ).innerHTML = `<p>Looking up <b>ID ${idToFind} (${bin2dec(
+    //   idToFind
+    // )})</b> from <b>Node ${originNodeId}</b>.</p>`;
 
-      updateTreeWithIdToFind();
-    }, 1000);
+    //   updateTreeWithIdToFind();
+    //   drawKBuckets("kbuckets", "kbuckets-title");
+    // }, 1000);
+    idToFind = "0b101110";
+    updateTreeWithIdToFind();
+    drawKBuckets("kbuckets", "kbuckets-title");
+    populateLocalNodeInfo();
   }
 
   function onNodeMouseOver(e) {
