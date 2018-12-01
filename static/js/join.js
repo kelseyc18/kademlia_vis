@@ -1,23 +1,35 @@
 "use strict";
 
 (() => {
+  // Variables
   var selectedNodeId = "";
   var originNodeId = "";
   var idToFind = "";
   var currentFrame = 0;
-  var minFrame = 0;
-  var maxFrame = 4;
-  
-  const graphNodes = [];
-  const graphEdges = [];
-  const treeNodes = [];
-  const treeEdges = [];
-  const kBuckets = {};
-  const k = 4;
+  var graphSVGDoc;
+  var treeSVGDoc;
 
+
+  var graphNodes = [];
+  var graphEdges = [];
+  var treeNodes = [];
+  var treeEdges = [];
+  var kBuckets = {};
+
+  // Constants
+  const minFrame = 0;
+  const maxFrame = 4;
+  const nodes = [1,11,21,31,32,35,37,46,50,55,58,59,62,63];
+  const joinNodeId = 28;
+  const k = 4;
+  const numNodes = 15;
+  const graphWidth = 400;
+  const graphHeight = 400;
+  const graphPadding = 20;
+  const graphRadius = graphWidth / 2 - graphPadding * 2;
+  const nodeSize = 40;
   const binaryPrefix = "0b";
   const offset = binaryPrefix.length;
-
   const colors = [
     "#EE6352",
     "#FFB847",
@@ -26,17 +38,19 @@
     "#FF7FE3",
     "#BBFF47"
   ];
-
   const selectedNodeColor = "#00CBFF";
   const selectedPathColor = "#00CBFF";
   const joiningNodeColor = "#00F893";
-
   const noSelectedGraphNodeColor = "#EEE";
   const noSelectedColor = "#000";
   const noSelectedLightColor = "#AAA";
-
   const idToFindTreeColor = "#133670";
 
+  //-----------------
+  // Helper functions
+  //-----------------
+
+  // Convert decimal to binary
   function dec2bin(dec) {
     const raw = (dec >>> 0).toString(2);
     const padding = "000000";
@@ -56,8 +70,17 @@
     return position;
   }
 
+  // Add node with given nodeID
+  function addNode(nodeID) {
+
+  }
+
+  //-----------------
+  // Render functions
+  //-----------------
+
   // Renders the Kademlia graph.
-  function render_graph() {
+  function render_graph(n, nodes) {
     var width,
       height,
       padding,
@@ -81,10 +104,8 @@
     height = 400;
     padding = 20;
 
-    n = 15;
     deg = 0;
 
-    nodes = [];
     while (nodes.length < n) {
       id = Math.floor(Math.random() * Math.pow(2, 6));
       if (!nodes.includes(id)) {
@@ -93,7 +114,8 @@
     }
     nodes.sort((a, b) => a - b);
 
-    draw = SVG("graph");
+    draw = graphSVGDoc;
+    draw.clear();
     draw.size(width, height);
     radius = width / 2 - padding * 2;
 
@@ -104,14 +126,6 @@
     group.attr("id", "lookup-kademlia-nodes");
     group2 = draw.group();
     group2.attr("id", "lookup-kademlia-labels");
-
-    // Draw joining node
-    circle = draw.circle(40);
-    circle.fill(joiningNodeColor);
-    circle.cx(-radius).cy(-radius);
-    //circle.attr("node-id", nodes[i]);
-    //circle.attr("data-id", dataId);
-    group.add(circle);
 
     // Create the nodes.
     for (i = 0; i < n; i++) {
@@ -176,6 +190,7 @@
     }
   }
 
+  // Renders tree
   function render_tree() {
     var draw,
       height,
@@ -195,7 +210,8 @@
     width = 600;
     padding = 75;
 
-    draw = SVG("binary-tree");
+    draw = treeSVGDoc;
+    draw.clear();
     draw.size(width, height);
 
     group2 = draw.group();
@@ -273,6 +289,9 @@
     }
   }
 
+  //-----------------
+  // Update functions
+  //-----------------
   function updateGraph() {
     for (var i = 0; i < graphNodes.length; i++) {
       var node = graphNodes[i];
@@ -416,6 +435,9 @@
     }
   }
 
+  //----------------------
+  // Interaction functions
+  //----------------------
   function onNodeClicked(e) {
     if (originNodeId !== "") return;
     originNodeId = e.target.getAttribute("data-id");
@@ -483,78 +505,145 @@
     updateGraph();
   }
 
-    function populateText(step_text, sim_text) {
-	const stepTextDiv = document.getElementById("step-num");
-	var stepText = "<p><b>" + step_text + "</b></p>";
-	stepTextDiv.innerHTML = stepText;
-	
-	const simTextDiv = document.getElementById("simulation-text");
-	var simText = "<p>" + sim_text + "</p>";
-	simTextDiv.innerHTML = simText;
-    }
+  //-----------------
+  // Frame functions
+  //-----------------
+  function populateText(step_text, sim_text) {
+  	const stepTextDiv = document.getElementById("step-num");
+  	var stepText = "<p><b>" + step_text + "</b></p>";
+  	stepTextDiv.innerHTML = stepText;
 
-    function frame0() {
-	updateGraph();
-	updateTree();
-	populateText("", "Press Next to begin stepping through Join simulation.");
-    }
+  	const simTextDiv = document.getElementById("simulation-text");
+  	var simText = "<p>" + sim_text + "</p>";
+  	simTextDiv.innerHTML = simText;
+  }
 
-    function frame1() {
-	updateGraph();
-	updateTree();
-	populateText("Step 1", "The joining node is assigned a nodeID.");
-    }
+  function resetVariables() {
+  	selectedNodeId = "";
+  	originNodeId = "";
+  	idToFind = "";
+  	graphSVGDoc;
+  	treeSVGDoc;
+  	graphNodes = [];
+  	graphEdges = [];
+  	treeNodes = [];
+  	treeEdges = [];
+  	kBuckets = {};
+  }
 
-    function frame2() {
-	updateGraph();
-	updateTree();
-	populateText("Step 2", "The joining node's k-buckets table is initialized with another known node c.");
-    }
+  function frame0() {
+  	resetVariables();
 
-    function frame3() {
-	updateGraph();
-	updateTree();
-	populateText("Step 3", "The joining node performs Lookup on itself in order to fill its k-buckets table.");
-    }
+    // Draw graph with joining node
+  	render_graph(numNodes-1, nodes);
+    var draw = graphSVGDoc;
+    var circle = draw.circle(nodeSize);
+    circle.fill(joiningNodeColor);
+    circle.cx(nodeSize).cy(nodeSize);
 
-    function frame4() {
-	updateGraph();
-	updateTree();
-	populateText("Step 4", "The joining node refreshes all its buckets with the information it has received.");
-    }
+  	render_tree();
+  	populateText("", "Press Next to begin stepping through Join simulation.");
+  }
 
-    function getFrame(i) {
-	frames = [
-	    frame0,
-	    frame1,
-	    frame2,
-	    frame3,
-	    frame4
-	]
-	return frames[i];
-    }
+  function frame1() {
+  	resetVariables();
 
-    $("#prev-btn").click(function() {
-	currentFrame = Math.max(minFrame, currentFrame-1);
-	console.log("Clicked previous button; currentFrame=", currentFrame);
-	var frame = getFrame(currentFrame);
-	frame();
-    });
-    
-    $("#next-btn").click(function() {
-	currentFrame = Math.min(maxFrame, currentFrame+1);
-	console.log("Clicked next button; currentFrame=", currentFrame);
-	var frame = getFrame(currentFrame);
-	frame();
-    });
-    
-    function initFrame() {
-	render_tree();
-	render_graph();
-	populateText("", "Press Next to begin stepping through Join simulation.");
-    }
+    // Draw graph with joining node
+  	render_graph(numNodes-1, nodes);
+    var draw = graphSVGDoc;
+    var circle = draw.circle(nodeSize);
+    circle.fill(joiningNodeColor);
+    circle.cx(nodeSize).cy(nodeSize);
 
-    // Initialize the Join simulation.
-    initFrame();
-    
+    // Assign attributes
+    var dataId = binaryPrefix + dec2bin(joinNodeId);
+    circle.attr("node-id", joinNodeId);
+    circle.attr("data-id", dataId);
+
+    // Display node ID in binary
+    var pos1 = getPos(draw.native(), circle.native());
+    var label = draw.plain(dec2bin(joinNodeId));
+    label.x(pos1.x - label.native().getBBox().width / 2);
+    label.y(pos1.y - 20);
+    label.attr("data-id", dataId);
+    label.attr("font-family", "Roboto");
+
+    // Display node ID in decimal
+    var label2 = draw.plain("(" + joinNodeId.toString() + ")");
+    label2.x(pos1.x - label2.native().getBBox().width / 2);
+    label2.y(pos1.y - 2);
+    label2.attr("data-id", dataId);
+    label2.attr("font-family", "Roboto");
+
+  	render_tree();
+  	populateText("Step 1", "The joining node is assigned a nodeID.");
+  }
+
+  function frame2() {
+  	resetVariables();
+
+    var frameNodes = nodes.slice(0);
+    frameNodes.push(joinNodeId);
+  	render_graph(numNodes, frameNodes);
+
+  	render_tree();
+  	populateText("Step 2", "The joining node's k-buckets table is initialized with another known node c.");
+  }
+
+  function frame3() {
+  	resetVariables();
+
+    var frameNodes = nodes.slice(0);
+    frameNodes.push(joinNodeId);
+  	render_graph(numNodes, frameNodes);
+
+  	render_tree();
+  	populateText("Step 3", "The joining node performs Lookup on itself in order to fill its k-buckets table.");
+  }
+
+  function frame4() {
+    resetVariables();
+
+    var frameNodes = nodes.slice(0);
+    frameNodes.push(joinNodeId);
+  	render_graph(numNodes, frameNodes);
+
+    render_tree();
+    populateText("Step 4", "The joining node refreshes all its buckets with the information it has received.");
+  }
+
+  function getFrame(i) {
+    frames = [
+      frame0,
+      frame1,
+      frame2,
+      frame3,
+      frame4
+    ]
+    return frames[i];
+  }
+
+  $("#prev-btn").click(function() {
+    currentFrame = Math.max(minFrame, currentFrame-1);
+    console.log("Clicked previous button; currentFrame=", currentFrame);
+    var frame = getFrame(currentFrame);
+    frame();
+  });
+
+  $("#next-btn").click(function() {
+    currentFrame = Math.min(maxFrame, currentFrame+1);
+    console.log("Clicked next button; currentFrame=", currentFrame);
+    var frame = getFrame(currentFrame);
+    frame();
+  });
+
+  function initFrame() {
+    graphSVGDoc = SVG("graph");
+    treeSVGDoc = SVG("binary-tree");
+    frame0();
+  }
+
+  // Initialize the Join simulation.
+  initFrame();
+
 })(this);
