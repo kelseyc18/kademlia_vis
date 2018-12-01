@@ -80,7 +80,7 @@
   //-----------------
 
   // Renders the Kademlia graph.
-  function render_graph(n, nodes) {
+  function render_graph(n, nodes, nodeColors) {
     var width,
       height,
       padding,
@@ -133,7 +133,11 @@
 
       // Draw node circle
       circle = draw.circle(40);
-      circle.fill(noSelectedGraphNodeColor);
+      if (nodes[i] in nodeColors) {
+        circle.fill(nodeColors[nodes[i]]);
+      } else {
+        circle.fill(noSelectedGraphNodeColor);
+      }
       deg += 360 / n;
       circle.cx(0).cy(-radius);
       circle.attr("transform", "rotate(" + deg + ")");
@@ -535,21 +539,21 @@
   	resetVariables();
 
     // Draw graph with joining node
-  	render_graph(numNodes-1, nodes);
+  	render_graph(numNodes-1, nodes, {});
     var draw = graphSVGDoc;
     var circle = draw.circle(nodeSize);
     circle.fill(joiningNodeColor);
     circle.cx(nodeSize).cy(nodeSize);
 
   	render_tree();
-  	populateText("", "Press Next to begin stepping through Join simulation.");
+  	populateText("Join Simulation", "Press Next to begin stepping through Join simulation.");
   }
 
   function frame1() {
   	resetVariables();
 
     // Draw graph with joining node
-  	render_graph(numNodes-1, nodes);
+  	render_graph(numNodes-1, nodes, {});
     var draw = graphSVGDoc;
     var circle = draw.circle(nodeSize);
     circle.fill(joiningNodeColor);
@@ -584,7 +588,9 @@
 
     var frameNodes = nodes.slice(0);
     frameNodes.push(joinNodeId);
-  	render_graph(numNodes, frameNodes);
+    var nodeColors = {};
+    nodeColors[joinNodeId] = joiningNodeColor;
+  	render_graph(numNodes, frameNodes, nodeColors);
 
   	render_tree();
   	populateText("Step 2", "The joining node's k-buckets table is initialized with another known node c.");
@@ -595,7 +601,9 @@
 
     var frameNodes = nodes.slice(0);
     frameNodes.push(joinNodeId);
-  	render_graph(numNodes, frameNodes);
+    var nodeColors = {};
+    nodeColors[joinNodeId] = joiningNodeColor;
+  	render_graph(numNodes, frameNodes, nodeColors);
 
   	render_tree();
   	populateText("Step 3", "The joining node performs Lookup on itself in order to fill its k-buckets table.");
@@ -606,7 +614,9 @@
 
     var frameNodes = nodes.slice(0);
     frameNodes.push(joinNodeId);
-  	render_graph(numNodes, frameNodes);
+    var nodeColors = {};
+    nodeColors[joinNodeId] = joiningNodeColor;
+  	render_graph(numNodes, frameNodes, nodeColors);
 
     render_tree();
     populateText("Step 4", "The joining node refreshes all its buckets with the information it has received.");
