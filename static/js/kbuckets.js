@@ -7,6 +7,9 @@
   const treeNodes = [];
   const treeEdges = [];
 
+  const binaryPrefix = "0b";
+  const offset = binaryPrefix.length;
+
   const colors = [
     "#EE6352",
     "#FFB847",
@@ -28,6 +31,14 @@
     const padding = "000000";
     const withPadding = padding + raw;
     return withPadding.substring(withPadding.length - padding.length);
+  }
+
+  function getCommonPrefixLength(s1, s2, offset) {
+    var index = offset;
+    while (index < s1.length && s1[index] === s2[index]) {
+      index++;
+    }
+    return index - offset;
   }
 
   // Returns the position of the provided SVG element.
@@ -93,7 +104,7 @@
 
     // Create the nodes.
     for (i = 0; i < n; i++) {
-      var dataId = "0b" + dec2bin(nodes[i]);
+      var dataId = binaryPrefix + dec2bin(nodes[i]);
 
       // Draw node circle
       circle = draw.circle(40);
@@ -184,7 +195,7 @@
       circle = draw.circle(10);
       circle.cx((width / (n + 1)) * (i + 1));
       circle.cy(height - padding);
-      circle.attr("data-id", "0b" + dec2bin(i));
+      circle.attr("data-id", binaryPrefix + dec2bin(i));
       group.add(circle);
       children.push(circle);
       treeNodes.push(circle);
@@ -226,21 +237,13 @@
       }
       if (newChildren.length === 1) {
         label = draw.text("0");
-        label.x(
-          (child1Pos.x + parentPos.x) / 2 - label.native().getBBox().width * 2
-        );
-        label.y(
-          (child1Pos.y + parentPos.y) / 2 - label.native().getBBox().height - 3
-        );
+        label.x((child1Pos.x + parentPos.x) / 2 - label.bbox().width * 2);
+        label.y((child1Pos.y + parentPos.y) / 2 - label.bbox().height - 3);
         group.add(label);
 
         label = draw.text("1");
-        label.x(
-          (child2Pos.x + parentPos.x) / 2 + label.native().getBBox().width * 2
-        );
-        label.y(
-          (child2Pos.y + parentPos.y) / 2 - label.native().getBBox().height - 3
-        );
+        label.x((child2Pos.x + parentPos.x) / 2 + label.bbox().width * 2);
+        label.y((child2Pos.y + parentPos.y) / 2 - label.bbox().height - 3);
         group.add(label);
       }
 
@@ -249,7 +252,6 @@
   }
 
   function updateGraph() {
-    const offset = "0b".length;
     for (var i = 0; i < graphNodes.length; i++) {
       var node = graphNodes[i];
       if (selectedNodeId === "") {
@@ -257,14 +259,12 @@
       } else if (selectedNodeId === node.attr("data-id")) {
         node.fill(selectedNodeColor);
       } else {
-        var index = offset;
-        while (
-          index < selectedNodeId.length &&
-          selectedNodeId[index] === node.attr("data-id")[index]
-        ) {
-          index++;
-        }
-        node.fill(colors[index - offset]);
+        const commonPrefixLength = getCommonPrefixLength(
+          selectedNodeId,
+          node.attr("data-id"),
+          offset
+        );
+        node.fill(colors[commonPrefixLength]);
       }
     }
 
@@ -272,24 +272,22 @@
       var edge = graphEdges[i];
       var edgeClasses = edge.classes();
       if (edgeClasses.includes(selectedNodeId)) {
-        var index = offset;
         var otherNodeId;
         for (var j = 0; j < edgeClasses.length; j++) {
           if (
-            edgeClasses[j].startsWith("0b") &&
+            edgeClasses[j].startsWith(binaryPrefix) &&
             edgeClasses[j] !== selectedNodeId
           ) {
             otherNodeId = edgeClasses[j];
             break;
           }
         }
-        while (
-          index < selectedNodeId.length &&
-          selectedNodeId[index] === otherNodeId[index]
-        ) {
-          index++;
-        }
-        edge.stroke({ color: colors[index - offset], width: 2 });
+        const commonPrefixLength = getCommonPrefixLength(
+          selectedNodeId,
+          otherNodeId,
+          offset
+        );
+        edge.stroke({ color: colors[commonPrefixLength], width: 2 });
       } else {
         edge.stroke({ color: noSelectedLightColor, width: 1 });
       }
@@ -297,9 +295,6 @@
   }
 
   function updateTree() {
-    var index;
-    const offset = "0b".length;
-
     for (var i = 0; i < treeNodes.length; i++) {
       var node = treeNodes[i];
       if (selectedNodeId === "") {
@@ -307,14 +302,12 @@
       } else if (selectedNodeId.startsWith(node.attr("data-id"))) {
         node.fill(selectedNodeColor);
       } else {
-        index = offset;
-        while (
-          index < selectedNodeId.length &&
-          selectedNodeId[index] === node.attr("data-id")[index]
-        ) {
-          index++;
-        }
-        node.fill(colors[index - offset]);
+        const commonPrefixLength = getCommonPrefixLength(
+          selectedNodeId,
+          node.attr("data-id"),
+          offset
+        );
+        node.fill(colors[commonPrefixLength]);
       }
     }
 
@@ -325,15 +318,13 @@
       } else if (selectedNodeId.startsWith(edge.attr("data-id"))) {
         edge.stroke({ color: selectedPathColor, width: 10, linecap: "round" });
       } else {
-        index = offset;
-        while (
-          index < selectedNodeId.length &&
-          selectedNodeId[index] === edge.attr("data-id")[index]
-        ) {
-          index++;
-        }
+        const commonPrefixLength = getCommonPrefixLength(
+          selectedNodeId,
+          edge.attr("data-id"),
+          offset
+        );
         edge.stroke({
-          color: colors[index - offset],
+          color: colors[commonPrefixLength],
           width: 4,
           linecap: "round"
         });

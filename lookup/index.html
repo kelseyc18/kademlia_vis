@@ -36,7 +36,7 @@
           <div class="sidenav">
             <a href="../kbuckets/">k-Buckets</a>
             <a href="../lookup/" class="selected">Lookup</a>
-	    <a href="../join/">Join</a>
+            <a href="../join/">Join</a>
           </div>
         </div>
         <div class="col">
@@ -49,6 +49,59 @@
             <div class="col">
               <div id="binary-tree" class="text-center"></div>
             </div>
+          </div>
+          <div class="row">
+            <div class="col">
+              <div id="kbuckets-title"></div>
+              <div id="kbuckets"></div>
+            </div>
+            <div class="col">
+              <div id="local-node-info"></div>
+              <button
+                id="send-find-node-button"
+                type="button"
+                class="btn btn-primary"
+              >
+                Send FIND_NODE RPCs to alpha contacts
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="modal fade"
+      id="find-node-modal"
+      tabindex="-1"
+      role="dialog"
+      aria-labelledby="modal-title"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="modal-title">
+              FIND_NODE RPC Responses
+            </h5>
+            <button
+              type="button"
+              class="close"
+              data-dismiss="modal"
+              aria-label="Close"
+            >
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div id="find-node-modal-body"></div>
+            <div id="modal-kbuckets-title"></div>
+            <div id="modal-kbuckets-svg"></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-primary" data-dismiss="modal">
+              Send Responses
+            </button>
           </div>
         </div>
       </div>

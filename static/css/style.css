@@ -45,3 +45,15 @@
     font-size: 18px;
   }
 }
+
+#kbuckets-title {
+  margin: 10px;
+}
+
+#kbuckets {
+  margin: 10px;
+}
+
+#send-find-node-button {
+  display: none;
+}
