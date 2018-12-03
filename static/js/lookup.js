@@ -578,13 +578,15 @@
   function populateModal() {
     document.getElementById(
       "find-node-modal-body"
-    ).innerHTML = `<p><span><b>Requester:</b> ${originNodeId} (${bin2dec(
+    ).innerHTML = `<p><span><b>Target ID:</b> ${idToFind} (${bin2dec(
+      idToFind
+    )})</span><br>
+    <span><b>Requester:</b> ${originNodeId} (${bin2dec(
       originNodeId
     )})</span><br>
     <span><b>Recipient:</b> ${alphaContacts[0]} (${bin2dec(
       alphaContacts[0]
-    )})</span><br>
-    <span><b>Target ID:</b> ${idToFind} (${bin2dec(idToFind)})</span></p>`;
+    )})</span></p>`;
 
     const closestIds = findKClosest(alphaContacts[0], idToFind, originNodeId);
     drawKBuckets(
@@ -594,6 +596,45 @@
       true,
       closestIds
     );
+
+    $("#find-node-modal-step").html("<p><b>Step 1</b></p>");
+    $("#find-node-modal-body-2").html(
+      `<p>The k closest nodes to Target ID ${idToFind} (${bin2dec(
+        idToFind
+      )}) are:<ul>${closestIds
+        .map(nodeId => `<li>${nodeId} (${bin2dec(nodeId)})</li>`)
+        .join("")}</ul></p>
+        <p>The ID address, port, and nodeID for these k closest nodes will be sent in the response RPC.</p>`
+    );
+
+    // Show second step when user clicks Next button
+    $("#modal-next-btn").click(() => {
+      const kBucketIndex = getCommonPrefixLength(
+        originNodeId,
+        alphaContacts[0],
+        offset
+      );
+
+      drawKBuckets(
+        "modal-kbuckets-svg",
+        "modal-kbuckets-title",
+        alphaContacts[0],
+        true
+      );
+      $("#find-node-modal-step").html("<p><b>Step 2</b></p>");
+      $("#find-node-modal-body-2").html(
+        `<p>The RPC recipient updates its k-bucket corresponding to the RPC sender <span style="background-color: ${
+          colors[kBucketIndex]
+        }">${originNodeId} (${bin2dec(
+          originNodeId
+        )})</span>.<ul><li>If the contact already exists, it is moved to the end of the bucket.</li>
+        <li>Otherwise, if the bucket is not full, the new contact is added at the end.</li>
+        <li>If the bucket is full, the node pings the contact at the head of the bucket's list. 
+        If that least recently seen contact fails to respond in an (unspecified) reasonable time, 
+        it is dropped from the list, and the new contact is added at the tail. 
+        Otherwise the new contact is ignored for bucket updating purposes.</li></ul></p>`
+      );
+    });
   }
 
   function findKClosest(startNodeId, targetId, requesterId) {

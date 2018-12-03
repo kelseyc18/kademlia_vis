@@ -57,3 +57,7 @@
 #send-find-node-button {
   display: none;
 }
+
+#modal-kbuckets-svg {
+  margin-bottom: 10px;
+}
