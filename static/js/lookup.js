@@ -425,7 +425,13 @@
     }
   }
 
-  function drawKBuckets(svgId, titleId) {
+  function drawKBuckets(
+    svgId,
+    titleId,
+    kbucketsForNodeId,
+    isFindNodeRPC,
+    closestIds
+  ) {
     var draw,
       labelGroup,
       label,
@@ -434,13 +440,17 @@
       rectangle,
       xPos,
       yPos,
+      closestIdCircle,
       highlightGroup,
       highlightRect;
 
     document.getElementById(
       titleId
-    ).innerHTML = `<b>k-buckets for ${originNodeId}</b>`;
+    ).innerHTML = `<b>k-buckets for ${kbucketsForNodeId} (${bin2dec(
+      kbucketsForNodeId
+    )})</b>`;
 
+    $(`#${svgId}`).empty();
     draw = SVG(svgId);
     highlightGroup = draw.group();
     rectGroup = draw.group();
@@ -448,9 +458,11 @@
 
     const padding = 10;
     const radius = 5;
+    const closestIdCircleSize = 15;
+
     draw.size((bucketWidth + 2 * padding) * k, (bucketHeight + padding) * 6);
 
-    const entries = Object.entries(kBuckets[originNodeId]);
+    const entries = Object.entries(kBuckets[kbucketsForNodeId]);
     entries.forEach(([commonPrefixLength, nodes]) => {
       nodes.forEach((nodeId, nodeIndex) => {
         xPos = nodeIndex * (bucketWidth + padding) + bucketWidth / 2 + padding;
@@ -467,10 +479,10 @@
           .fill(colors[commonPrefixLength]);
         rectGroup.add(rectangle);
 
-        if (idToFind !== "") {
+        if (idToFind !== "" && !isFindNodeRPC) {
           if (
             parseInt(commonPrefixLength) ===
-            getCommonPrefixLength(idToFind, originNodeId, offset)
+            getCommonPrefixLength(idToFind, kbucketsForNodeId, offset)
           ) {
             highlightRect = draw
               .rect(bucketWidth + padding, bucketHeight + padding)
@@ -504,6 +516,16 @@
         label2.attr("data-id", nodeId);
         label2.attr("font-family", "Roboto");
         labelGroup.add(label2);
+
+        if (closestIds && closestIds.includes(nodeId)) {
+          closestIdCircle = draw
+            .circle(closestIdCircleSize)
+            .fill(idToFindTreeColor)
+            .x(xPos + bucketWidth / 4)
+            .y(yPos + bucketHeight / 9)
+            .attr("data-id", nodeId);
+          labelGroup.add(closestIdCircle);
+        }
       });
     });
   }
@@ -542,7 +564,7 @@
     )}</b>.</p>
     <p><b>closestNode</b>, the contact closest to the target ID ${idToFind} (${bin2dec(
       idToFind
-    )}), is <b>${closestNode} (${bin2dec(closestNode)}).</b></p>`;
+    )}), is <b>${closestNode} (${bin2dec(closestNode)})</b>.</p>`;
 
     $("#send-find-node-button").attr("style", "display: inline;");
     $("#send-find-node-button").click(() => {
@@ -563,7 +585,51 @@
       alphaContacts[0]
     )})</span><br>
     <span><b>Target ID:</b> ${idToFind} (${bin2dec(idToFind)})</span></p>`;
-    drawKBuckets("modal-kbuckets-svg", "modal-kbuckets-title");
+
+    const closestIds = findKClosest(alphaContacts[0], idToFind, originNodeId);
+    drawKBuckets(
+      "modal-kbuckets-svg",
+      "modal-kbuckets-title",
+      alphaContacts[0],
+      true,
+      closestIds
+    );
+  }
+
+  function findKClosest(startNodeId, targetId, requesterId) {
+    const maxHeap = new Heap((x, y) => {
+      if (x.distance < y.distance) {
+        return 1;
+      }
+      if (x.distance > y.distance) {
+        return -1;
+      }
+      return 0;
+    });
+
+    const buckets = Object.values(kBuckets[startNodeId]);
+    for (var i = 0; i < buckets.length; i++) {
+      for (var j = 0; j < buckets[i].length; j++) {
+        const currentNode = buckets[i][j];
+
+        if (maxHeap.size() < k) {
+          maxHeap.push({
+            nodeId: currentNode,
+            distance: getDistance(currentNode, targetId)
+          });
+        } else if (
+          getDistance(currentNode, targetId) < maxHeap.peek().distance &&
+          currentNode !== requesterId
+        ) {
+          maxHeap.replace({
+            nodeId: currentNode,
+            distance: getDistance(currentNode, targetId)
+          });
+        }
+      }
+    }
+
+    return maxHeap.toArray().map(entry => entry.nodeId);
   }
 
   function updateTreeWithIdToFind() {
@@ -626,11 +692,11 @@
     // )})</b> from <b>Node ${originNodeId}</b>.</p>`;
 
     //   updateTreeWithIdToFind();
-    //   drawKBuckets("kbuckets", "kbuckets-title");
+    //   drawKBuckets("kbuckets", "kbuckets-title", originNodeId);
     // }, 1000);
     idToFind = "0b101110";
     updateTreeWithIdToFind();
-    drawKBuckets("kbuckets", "kbuckets-title");
+    drawKBuckets("kbuckets", "kbuckets-title", originNodeId);
     populateLocalNodeInfo();
   }
 
