@@ -4,9 +4,19 @@
   var selectedNodeId = "";
   var originNodeId = "";
   var idToFind = "";
-  var closestNode = "";
+  var currentModalFrame = 0;
+
   const alphaContacts = [];
-  const closestNodes = [];
+  const maxHeapComparator = (x, y) => {
+    if (x.distance < y.distance) {
+      return 1;
+    }
+    if (x.distance > y.distance) {
+      return -1;
+    }
+    return 0;
+  };
+  const closestNodes = new Heap(maxHeapComparator);
   const kBuckets = {};
 
   const graphNodes = [];
@@ -16,6 +26,8 @@
   const k = 4;
   const alpha = 3;
   const kBucketRects = {};
+
+  const modalFramesPerRPC = 2;
 
   const binaryPrefix = "0b";
   const offset = binaryPrefix.length;
@@ -37,9 +49,13 @@
   const noSelectedLightColor = "#AAA";
 
   const idToFindTreeColor = "#133670";
+  const closestNodesColor = "#2160c4";
 
   const bucketWidth = 90;
   const bucketHeight = 60;
+  const padding = 10;
+
+  var treeCanvas;
 
   function dec2bin(dec) {
     const raw = (dec >>> 0).toString(2);
@@ -90,6 +106,20 @@
     const tokens = [];
     ids.forEach(id => {
       tokens.push(`${id} (${bin2dec(id)})`);
+    });
+    return tokens.join(", ");
+  }
+
+  function idsToStringContacted(heapArray) {
+    const tokens = [];
+    heapArray.forEach(entry => {
+      tokens.push(
+        `<b><span style="color: ${closestNodesColor}">${
+          entry.nodeId
+        } (${bin2dec(entry.nodeId)})</span></b> [${
+          entry.contacted ? "contacted" : "not contacted"
+        }]`
+      );
     });
     return tokens.join(", ");
   }
@@ -226,6 +256,7 @@
     padding = 75;
 
     draw = SVG("binary-tree");
+    treeCanvas = draw;
     draw.size(width, height);
 
     group2 = draw.group();
@@ -456,12 +487,15 @@
     rectGroup = draw.group();
     labelGroup = draw.group();
 
-    const padding = 10;
     const radius = 5;
     const closestIdCircleSize = 15;
 
-    draw.size((bucketWidth + 2 * padding) * k, (bucketHeight + padding) * 6);
+    draw.size(
+      (bucketWidth + padding) * k + padding,
+      (bucketHeight + padding) * 6
+    );
 
+    kBucketRects[svgId] = {};
     const entries = Object.entries(kBuckets[kbucketsForNodeId]);
     entries.forEach(([commonPrefixLength, nodes]) => {
       nodes.forEach((nodeId, nodeIndex) => {
@@ -476,6 +510,7 @@
           .radius(radius)
           .cx(xPos)
           .cy(yPos)
+          .attr("data-id", nodeId)
           .fill(colors[commonPrefixLength]);
         rectGroup.add(rectangle);
 
@@ -497,12 +532,6 @@
           }
         }
 
-        if (commonPrefixLength in kBucketRects) {
-          kBucketRects[commonPrefixLength].push(rectangle);
-        } else {
-          kBucketRects[commonPrefixLength] = [rectangle];
-        }
-
         label = draw.text(nodeId);
         label.x(xPos - label.bbox().width / 2);
         label.y(yPos - label.bbox().height / 2 - padding);
@@ -517,10 +546,12 @@
         label2.attr("font-family", "Roboto");
         labelGroup.add(label2);
 
+        kBucketRects[svgId][nodeId] = [rectangle, label, label2];
+
         if (closestIds && closestIds.includes(nodeId)) {
           closestIdCircle = draw
             .circle(closestIdCircleSize)
-            .fill(idToFindTreeColor)
+            .fill(closestNodesColor)
             .x(xPos + bucketWidth / 4)
             .y(yPos + bucketHeight / 9)
             .attr("data-id", nodeId);
@@ -543,39 +574,44 @@
     }
   }
 
-  function updateClosestNode() {
-    alphaContacts.forEach(nodeId => {
-      if (
-        closestNode === "" ||
-        getDistance(idToFind, closestNode) > getDistance(idToFind, nodeId)
-      ) {
-        closestNode = nodeId;
-      }
-    });
-  }
-
   function populateLocalNodeInfo() {
     populateAlphaContacts();
-    updateClosestNode();
 
     const infoDiv = document.getElementById("local-node-info");
     infoDiv.innerHTML = `<p>The first alpha (${alpha}) contacts are <b>${idsToString(
       alphaContacts
-    )}</b>.</p>
-    <p><b>closestNode</b>, the contact closest to the target ID ${idToFind} (${bin2dec(
-      idToFind
-    )}), is <b>${closestNode} (${bin2dec(closestNode)})</b>.</p>`;
+    )}</b>.</p>`;
 
     $("#send-find-node-button").attr("style", "display: inline;");
     $("#send-find-node-button").click(() => {
       $("#find-node-modal").modal();
     });
     $("#find-node-modal").on("shown.bs.modal", () => {
+      $("#modal-next-btn").html("Next");
+      $("#modal-previous-btn").hide();
       populateModal();
     });
   }
 
   function populateModal() {
+    if (currentModalFrame > 0) {
+      $("#modal-previous-btn").show();
+    }
+
+    const alphaContactIndex = Math.floor(currentModalFrame / modalFramesPerRPC);
+    switch (currentModalFrame % modalFramesPerRPC) {
+      case 0:
+        populateModalKClosest(alphaContactIndex);
+        break;
+      case 1:
+        populateModalUpdateKBuckets(alphaContactIndex);
+        break;
+    }
+  }
+
+  function populateModalKClosest(alphaContactIndex) {
+    const alphaContact = alphaContacts[alphaContactIndex];
+
     document.getElementById(
       "find-node-modal-body"
     ).innerHTML = `<p><span><b>Target ID:</b> ${idToFind} (${bin2dec(
@@ -584,19 +620,20 @@
     <span><b>Requester:</b> ${originNodeId} (${bin2dec(
       originNodeId
     )})</span><br>
-    <span><b>Recipient:</b> ${alphaContacts[0]} (${bin2dec(
-      alphaContacts[0]
+    <span><b>Recipient:</b> ${alphaContact} (${bin2dec(
+      alphaContact
     )})</span></p>`;
 
-    const closestIds = findKClosest(alphaContacts[0], idToFind, originNodeId);
+    const closestIds = findKClosest(alphaContact, idToFind, originNodeId);
     drawKBuckets(
       "modal-kbuckets-svg",
       "modal-kbuckets-title",
-      alphaContacts[0],
+      alphaContact,
       true,
       closestIds
     );
 
+    $("#modal-button-container").hide();
     $("#find-node-modal-step").html("<p><b>Step 1</b></p>");
     $("#find-node-modal-body-2").html(
       `<p>The k closest nodes to Target ID ${idToFind} (${bin2dec(
@@ -608,45 +645,168 @@
     );
 
     // Show second step when user clicks Next button
-    $("#modal-next-btn").click(() => {
-      const kBucketIndex = getCommonPrefixLength(
-        originNodeId,
-        alphaContacts[0],
-        offset
-      );
-
-      drawKBuckets(
-        "modal-kbuckets-svg",
-        "modal-kbuckets-title",
-        alphaContacts[0],
-        true
-      );
-      $("#find-node-modal-step").html("<p><b>Step 2</b></p>");
-      $("#find-node-modal-body-2").html(
-        `<p>The RPC recipient updates its k-bucket corresponding to the RPC sender <span style="background-color: ${
-          colors[kBucketIndex]
-        }">${originNodeId} (${bin2dec(
-          originNodeId
-        )})</span>.<ul><li>If the contact already exists, it is moved to the end of the bucket.</li>
-        <li>Otherwise, if the bucket is not full, the new contact is added at the end.</li>
-        <li>If the bucket is full, the node pings the contact at the head of the bucket's list. 
-        If that least recently seen contact fails to respond in an (unspecified) reasonable time, 
-        it is dropped from the list, and the new contact is added at the tail. 
-        Otherwise the new contact is ignored for bucket updating purposes.</li></ul></p>`
-      );
+    $("#modal-next-btn").one("click", () => {
+      currentModalFrame += 1;
+      populateModal();
     });
   }
 
-  function findKClosest(startNodeId, targetId, requesterId) {
-    const maxHeap = new Heap((x, y) => {
-      if (x.distance < y.distance) {
-        return 1;
-      }
-      if (x.distance > y.distance) {
-        return -1;
-      }
-      return 0;
+  function populateModalUpdateKBuckets(alphaContactIndex) {
+    const alphaContact = alphaContacts[alphaContactIndex];
+
+    const kBucketIndex = getCommonPrefixLength(
+      originNodeId,
+      alphaContact,
+      offset
+    );
+
+    drawKBuckets(
+      "modal-kbuckets-svg",
+      "modal-kbuckets-title",
+      alphaContact,
+      true
+    );
+
+    const containsContact = kBuckets[alphaContact][kBucketIndex].includes(
+      originNodeId
+    );
+    const isFull = kBuckets[alphaContact][kBucketIndex].length == k;
+    const firstContact =
+      kBuckets[alphaContact][kBucketIndex] &&
+      kBuckets[alphaContact][kBucketIndex][0];
+    if (
+      kBuckets[alphaContact][kBucketIndex].includes(originNodeId) &&
+      kBuckets[alphaContact][kBucketIndex].indexOf(originNodeId) <
+        kBuckets[alphaContact][kBucketIndex].length - 1
+    ) {
+      $("#modal-button-container").show();
+    } else {
+      $("#modal-button-container").hide();
+    }
+    $("#view-animation-button").prop("disabled", false);
+    $("#view-animation-button").off("click");
+    $("#view-animation-button").on("click", () => {
+      $("#view-animation-button").prop("disabled", true);
+      animateKBucketUpdate(
+        "modal-kbuckets-svg",
+        originNodeId,
+        alphaContact,
+        kBucketIndex
+      );
     });
+    $("#reset-animation-button").off("click");
+    $("#reset-animation-button").on("click", () => {
+      drawKBuckets(
+        "modal-kbuckets-svg",
+        "modal-kbuckets-title",
+        alphaContact,
+        true
+      );
+      $("#view-animation-button").prop("disabled", false);
+    });
+    $("#modal-previous-btn").show();
+    $("#find-node-modal-step").html("<p><b>Step 2</b></p>");
+    $("#find-node-modal-body-2").html(
+      `<p>The RPC recipient updates its k-bucket corresponding to the RPC sender <span style="background-color: ${
+        colors[kBucketIndex]
+      }">${originNodeId} (${bin2dec(originNodeId)})</span>.<ul>
+      ${
+        containsContact
+          ? "<li>The contact is already contained in the k-bucket. It will be moved to the tail of the bucket.</li>"
+          : "<li>The contact is not contained in the k-bucket.</li>"
+      }
+      ${
+        !containsContact && !isFull
+          ? "<li>The k-bucket is not full, so we add the contact to the end of the list.</li>"
+          : ""
+      }
+      ${
+        !containsContact && isFull
+          ? `<li>The bucket is full, so the RPC recipient pings the contact 
+      at the head of the bucket's list, ${firstContact} (${bin2dec(
+              firstContact
+            )}). As long as this least recently seen contact responds within 
+      a reasonable time, the new contact is ignored. Otherwise, the new contact is added at the tail.</li>`
+          : ""
+      }
+      </ul></p>`
+    );
+
+    if (alphaContactIndex + 1 < alphaContacts.length) {
+      $("#modal-next-btn").one("click", () => {
+        currentModalFrame += 1;
+        populateModal();
+      });
+    } else {
+      $("#modal-next-btn").html("Finish");
+      $("#modal-next-btn").one("click", () => {
+        currentModalFrame = 0;
+        $("#find-node-modal").modal("hide");
+        $("#send-find-node-button").hide();
+        var nodesReturned = [];
+        var kClosestUpdated = false;
+        alphaContacts.forEach(alphaContact => {
+          const kClosest = findKClosest(alphaContact, idToFind, originNodeId);
+          nodesReturned.push(
+            `<p><b>${alphaContact} (${bin2dec(
+              alphaContact
+            )})</b>: ${idsToString(kClosest)}</p>`
+          );
+
+          // Update k-closest local state on origin node
+          kClosest.forEach(nodeId => {
+            const distance = getDistance(nodeId, idToFind);
+
+            var notInHeap = true;
+            closestNodes.toArray().forEach(cnode => {
+              if (cnode.nodeId === nodeId) notInHeap = false;
+            });
+
+            if (notInHeap) {
+              if (closestNodes.size() < k) {
+                closestNodes.push({
+                  nodeId,
+                  distance,
+                  contacted: alphaContacts.includes(nodeId)
+                });
+                kClosestUpdated = true;
+              } else if (
+                distance < closestNodes.peek().distance &&
+                nodeId !== originNodeId
+              ) {
+                closestNodes.replace({
+                  nodeId,
+                  distance,
+                  contacted: alphaContacts.includes(nodeId)
+                });
+                kClosestUpdated = true;
+              }
+            }
+          });
+        });
+
+        if (kClosestUpdated) {
+          // Send FIND_NODE requests to alpha contacts
+        }
+
+        $("#rpc-response-container").html(
+          `<p><b>FIND_NODE Responses</b></p><p><i><b>Contact node</b>: k-closest nodes to target</i></p>
+          ${nodesReturned.join("")}`
+        );
+        $("#local-node-info").hide();
+        $("#rpc-response-container").show();
+        $("#shortlist-container").html(
+          `<p><b>k-closest nodes</b>: ${idsToStringContacted(
+            closestNodes.toArray()
+          )}</p>`
+        );
+        updateTreeWithClosestNodes();
+      });
+    }
+  }
+
+  function findKClosest(startNodeId, targetId, requesterId) {
+    const maxHeap = new Heap(maxHeapComparator);
 
     const buckets = Object.values(kBuckets[startNodeId]);
     for (var i = 0; i < buckets.length; i++) {
@@ -678,7 +838,81 @@
       const node = treeNodes[i];
       if (node.attr("data-id") === idToFind) {
         node.fill(idToFindTreeColor);
+        const polyline = treeCanvas.polyline("0,30 0,0 -10,15 0,0 10,15");
+        polyline.fill("none").move(node.cx() - padding, node.cy() + padding);
+        polyline.stroke({
+          color: idToFindTreeColor,
+          width: 4,
+          linecap: "round",
+          linejoin: "round"
+        });
       }
+    }
+  }
+
+  function updateTreeWithClosestNodes() {
+    for (var i = 0; i < treeNodes.length; i++) {
+      const node = treeNodes[i];
+      if (node.attr("data-id") === idToFind) {
+        node.fill(idToFindTreeColor);
+      } else {
+        var isClosest = false;
+        closestNodes.toArray().forEach(cnode => {
+          if (node.attr("data-id") === cnode.nodeId) {
+            isClosest = true;
+          }
+        });
+
+        if (isClosest) {
+          node.fill(closestNodesColor);
+        } else if (selectedNodeId.startsWith(node.attr("data-id"))) {
+          node.fill(selectedNodeColor);
+        } else {
+          const commonPrefixLength = getCommonPrefixLength(
+            originNodeId,
+            node.attr("data-id"),
+            offset
+          );
+          node.fill(colors[commonPrefixLength]);
+        }
+      }
+    }
+  }
+
+  function animateKBucketUpdate(svgId, nodeToMove, ownerNode, kBucketIndex) {
+    const shapes = kBucketRects[svgId][nodeToMove];
+    const nodeToMoveId = shapes ? shapes[0].attr("data-id") : null;
+
+    if (
+      nodeToMoveId &&
+      kBuckets[ownerNode][kBucketIndex].indexOf(nodeToMoveId) <
+        kBuckets[ownerNode][kBucketIndex].length - 1
+    ) {
+      shapes.forEach(shape => shape.animate().attr({ opacity: 0 }));
+
+      // Shift remaining elements to the left
+      const selectedKBucket = kBuckets[ownerNode][kBucketIndex];
+      var shift = false;
+      for (var i = 0; i < selectedKBucket.length; i++) {
+        if (shift) {
+          const shapesToShift = kBucketRects[svgId][selectedKBucket[i]];
+          shapesToShift.forEach(shape =>
+            shape.animate().x(shape.x() - bucketWidth - padding)
+          );
+        }
+        if (selectedKBucket[i] === nodeToMoveId) shift = true;
+      }
+
+      const diff =
+        kBuckets[ownerNode][kBucketIndex].length -
+        kBuckets[ownerNode][kBucketIndex].indexOf(nodeToMoveId) -
+        1;
+      shapes.forEach(shape =>
+        shape
+          .animate()
+          .attr({ opacity: 1 })
+          .x(shape.x() + (bucketWidth + padding) * diff)
+      );
     }
   }
 

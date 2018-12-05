@@ -46,6 +46,12 @@
   }
 }
 
+#modal-button-container {
+  margin-top: 10px;
+  margin-bottom: 10px;
+  display: none;
+}
+
 #kbuckets-title {
   margin: 10px;
 }
@@ -59,5 +65,13 @@
 }
 
 #modal-kbuckets-svg {
+  margin-bottom: 10px;
+}
+
+#rpc-response-container {
+  padding: 10px;
+  background-color: bisque;
+  border: 1px solid black;
+  display: none;
   margin-bottom: 10px;
 }
