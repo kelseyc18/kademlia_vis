@@ -20,6 +20,7 @@
       crossorigin="anonymous"
     ></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/heap.js" type="text/javascript"></script>
     <title>Kademlia Visualization - Join</title>
     <meta
       name="description"
@@ -42,14 +43,16 @@
         <div class="col">
           <div class="row">
             <div class="col">
-	      <div id="graph" class="text-center"></div>
-	    </div>
+	             <div id="graph" class="text-center"></div>
+            </div>
             <div class="col">
               <div id="binary-tree" class="text-center"></div>
             </div>
-          </div>
+        </div>
 	  <div class="row">
 	    <div class="col">
+        <div id="kbuckets-title"></div>
+        <div id="kbuckets"></div>
 	    </div>
 	    <div class="col">
 	      <div id="step-num"></div>
