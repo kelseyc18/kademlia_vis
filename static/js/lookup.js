@@ -5,8 +5,10 @@
   var originNodeId = "";
   var idToFind = "";
   var currentModalFrame = 0;
+  var roundNum = 1;
+  var alphaContacts = [];
+  const allContactedNodes = [];
 
-  const alphaContacts = [];
   const maxHeapComparator = (x, y) => {
     if (x.distance < y.distance) {
       return 1;
@@ -19,6 +21,7 @@
   const closestNodes = new Heap(maxHeapComparator);
   const kBuckets = {};
 
+  const nodes = [];
   const graphNodes = [];
   const graphEdges = [];
   const treeNodes = [];
@@ -45,11 +48,13 @@
   const selectedPathColor = "#00CBFF";
 
   const noSelectedGraphNodeColor = "#EEE";
-  const noSelectedColor = "#000";
+  const noSelectedColor = "#AAA";
   const noSelectedLightColor = "#AAA";
 
   const idToFindTreeColor = "#133670";
   const closestNodesColor = "#2160c4";
+
+  const treeNodeNotInGraphColor = "#FFFFFF";
 
   const bucketWidth = 90;
   const bucketHeight = 60;
@@ -142,7 +147,6 @@
       label,
       label2,
       line,
-      nodes,
       id;
 
     width = 400;
@@ -152,7 +156,6 @@
     n = 15;
     deg = 0;
 
-    nodes = [];
     while (nodes.length < n) {
       id = Math.floor(Math.random() * Math.pow(2, 6));
       if (!nodes.includes(id)) {
@@ -267,7 +270,7 @@
 
     // Draw leaves
     for (i = 0; i < n; i++) {
-      circle = draw.circle(10);
+      circle = draw.circle(9);
       circle.cx((width / (n + 1)) * (i + 1));
       circle.cy(height - padding);
       circle.attr("data-id", binaryPrefix + dec2bin(i));
@@ -396,17 +399,25 @@
   function updateTree() {
     for (var i = 0; i < treeNodes.length; i++) {
       var node = treeNodes[i];
+      const nodeInGraph =
+        nodes.includes(bin2dec(node.attr("data-id"))) ||
+        node.attr("data-id").length < "0b000000".length;
       if (selectedNodeId === "") {
-        node.fill(noSelectedColor);
+        node.fill(nodeInGraph ? noSelectedColor : treeNodeNotInGraphColor);
+        node.stroke({ color: noSelectedColor, width: 2 });
       } else if (selectedNodeId.startsWith(node.attr("data-id"))) {
-        node.fill(selectedNodeColor);
+        node.fill(nodeInGraph ? selectedNodeColor : treeNodeNotInGraphColor);
+        node.stroke({ color: selectedNodeColor, width: 2 });
       } else {
         const commonPrefixLength = getCommonPrefixLength(
           selectedNodeId,
           node.attr("data-id"),
           offset
         );
-        node.fill(colors[commonPrefixLength]);
+        node.fill(
+          nodeInGraph ? colors[commonPrefixLength] : treeNodeNotInGraphColor
+        );
+        node.stroke({ color: colors[commonPrefixLength], width: 2 });
       }
     }
 
@@ -575,22 +586,27 @@
   }
 
   function populateLocalNodeInfo() {
-    populateAlphaContacts();
+    $("#local-node-info").html(
+      `<p><b>Round ${roundNum}</b> contacts are <b>${idsToString(
+        alphaContacts
+      )}</b>.</p>`
+    );
+    $("#local-node-info").show();
 
-    const infoDiv = document.getElementById("local-node-info");
-    infoDiv.innerHTML = `<p>The first alpha (${alpha}) contacts are <b>${idsToString(
-      alphaContacts
-    )}</b>.</p>`;
-
-    $("#send-find-node-button").attr("style", "display: inline;");
-    $("#send-find-node-button").click(() => {
+    $("#send-find-node-button").show();
+    $("#send-find-node-button").html(
+      `Send FIND_NODE RPC to Round ${roundNum} contacts`
+    );
+    $("#send-find-node-button").on("click", () => {
       $("#find-node-modal").modal();
+      $("#find-node-modal").one("shown.bs.modal", () => {
+        $("#modal-next-btn").html("Next");
+        $("#modal-previous-btn").hide();
+        currentModalFrame = 0;
+        populateModal();
+      });
     });
-    $("#find-node-modal").on("shown.bs.modal", () => {
-      $("#modal-next-btn").html("Next");
-      $("#modal-previous-btn").hide();
-      populateModal();
-    });
+    $("#rpc-response-container").hide();
   }
 
   function populateModal() {
@@ -738,11 +754,10 @@
         populateModal();
       });
     } else {
+      $("#send-find-node-button").off();
       $("#modal-next-btn").html("Finish");
       $("#modal-next-btn").one("click", () => {
-        currentModalFrame = 0;
         $("#find-node-modal").modal("hide");
-        $("#send-find-node-button").hide();
         var nodesReturned = [];
         var kClosestUpdated = false;
         alphaContacts.forEach(alphaContact => {
@@ -767,7 +782,9 @@
                 closestNodes.push({
                   nodeId,
                   distance,
-                  contacted: alphaContacts.includes(nodeId)
+                  contacted:
+                    allContactedNodes.includes(nodeId) ||
+                    alphaContacts.includes(nodeId)
                 });
                 kClosestUpdated = true;
               } else if (
@@ -777,7 +794,9 @@
                 closestNodes.replace({
                   nodeId,
                   distance,
-                  contacted: alphaContacts.includes(nodeId)
+                  contacted:
+                    allContactedNodes.includes(nodeId) ||
+                    alphaContacts.includes(nodeId)
                 });
                 kClosestUpdated = true;
               }
@@ -785,24 +804,85 @@
           });
         });
 
-        if (kClosestUpdated) {
-          // Send FIND_NODE requests to alpha contacts
-        }
-
         $("#rpc-response-container").html(
           `<p><b>FIND_NODE Responses</b></p><p><i><b>Contact node</b>: k-closest nodes to target</i></p>
           ${nodesReturned.join("")}`
         );
-        $("#local-node-info").hide();
-        $("#rpc-response-container").show();
         $("#shortlist-container").html(
           `<p><b>k-closest nodes</b>: ${idsToStringContacted(
             closestNodes.toArray()
           )}</p>`
         );
+        $("#shortlist-container").show();
+        updateTree();
         updateTreeWithClosestNodes();
+
+        const newAlphaContacts = [];
+
+        if (kClosestUpdated) {
+          // Send FIND_NODE requests to alpha contacts
+          roundNum += 1;
+
+          closestNodes.toArray().forEach(entry => {
+            if (!entry.contacted && newAlphaContacts.length < alpha) {
+              entry.contacted = true;
+              newAlphaContacts.push(entry.nodeId);
+            }
+          });
+
+          allContactedNodes.concat(alphaContacts);
+          alphaContacts = newAlphaContacts;
+
+          if (alphaContacts.length === 0) {
+            displayFinalKContacts();
+          } else {
+            populateLocalNodeInfo();
+          }
+        } else {
+          allContactedNodes.concat(alphaContacts);
+
+          closestNodes.toArray().forEach(entry => {
+            if (!entry.contacted) {
+              entry.contacted = true;
+              newAlphaContacts.push(entry.nodeId);
+            }
+          });
+
+          allContactedNodes.concat(alphaContacts);
+          alphaContacts = newAlphaContacts;
+
+          $("#local-node-info")
+            .html(`<p style="color: #28a745;"><b>No new nodes were returned that 
+          were closer than the previous k-closest.</b></p>`);
+
+          if (alphaContacts.length === 0) {
+            displayFinalKContacts();
+            $("#send-find-node-button").hide();
+          } else {
+            populateLocalNodeInfo();
+            $("#send-find-node-button").show();
+          }
+        }
+        $("#rpc-response-container").show();
       });
     }
+  }
+
+  function displayFinalKContacts() {
+    $("#final-results-container").html(
+      `<p>The following nodes are the k closest to <b>Target ID ${idToFind} (${bin2dec(
+        idToFind
+      )})</b>:</p><ul>${closestNodes
+        .toArray()
+        .map(
+          node =>
+            `<li>${node.nodeId} (${bin2dec(
+              node.nodeId
+            )}) - distance ${getDistance(node.nodeId, idToFind)}</li>`
+        )
+        .join("")}</ul>`
+    );
+    $("#final-results-container").show();
   }
 
   function findKClosest(startNodeId, targetId, requesterId) {
@@ -837,7 +917,12 @@
     for (var i = 0; i < treeNodes.length; i++) {
       const node = treeNodes[i];
       if (node.attr("data-id") === idToFind) {
-        node.fill(idToFindTreeColor);
+        node.fill(
+          node.attr("data-id") !== idToFind
+            ? idToFindTreeColor
+            : treeNodeNotInGraphColor
+        );
+        node.stroke({ color: idToFindTreeColor, width: 2 });
         const polyline = treeCanvas.polyline("0,30 0,0 -10,15 0,0 10,15");
         polyline.fill("none").move(node.cx() - padding, node.cy() + padding);
         polyline.stroke({
@@ -853,9 +938,7 @@
   function updateTreeWithClosestNodes() {
     for (var i = 0; i < treeNodes.length; i++) {
       const node = treeNodes[i];
-      if (node.attr("data-id") === idToFind) {
-        node.fill(idToFindTreeColor);
-      } else {
+      if (node.attr("data-id") !== idToFind) {
         var isClosest = false;
         closestNodes.toArray().forEach(cnode => {
           if (node.attr("data-id") === cnode.nodeId) {
@@ -865,15 +948,7 @@
 
         if (isClosest) {
           node.fill(closestNodesColor);
-        } else if (selectedNodeId.startsWith(node.attr("data-id"))) {
-          node.fill(selectedNodeColor);
-        } else {
-          const commonPrefixLength = getCommonPrefixLength(
-            originNodeId,
-            node.attr("data-id"),
-            offset
-          );
-          node.fill(colors[commonPrefixLength]);
+          node.stroke({ color: closestNodesColor, width: 2 });
         }
       }
     }
@@ -972,6 +1047,7 @@
     idToFind = "0b101110";
     updateTreeWithIdToFind();
     drawKBuckets("kbuckets", "kbuckets-title", originNodeId);
+    populateAlphaContacts();
     populateLocalNodeInfo();
   }
 
@@ -992,4 +1068,5 @@
   // Initialize the DHT diagram.
   render_graph();
   render_tree();
+  updateTree();
 })(this);

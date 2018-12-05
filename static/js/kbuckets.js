@@ -6,6 +6,7 @@
   const graphEdges = [];
   const treeNodes = [];
   const treeEdges = [];
+  const nodes = [];
 
   const binaryPrefix = "0b";
   const offset = binaryPrefix.length;
@@ -23,14 +24,24 @@
   const selectedPathColor = "#00CBFF";
 
   const noSelectedGraphNodeColor = "#EEE";
-  const noSelectedColor = "#000";
+  const noSelectedColor = "#AAA";
   const noSelectedLightColor = "#AAA";
+
+  const treeNodeNotInGraphColor = "#FFFFFF";
 
   function dec2bin(dec) {
     const raw = (dec >>> 0).toString(2);
     const padding = "000000";
     const withPadding = padding + raw;
     return withPadding.substring(withPadding.length - padding.length);
+  }
+
+  function bin2dec(bin) {
+    if (bin.startsWith(binaryPrefix)) {
+      return parseInt(bin.substring(binaryPrefix.length), 2);
+    } else {
+      return parseInt(bin, 2);
+    }
   }
 
   function getCommonPrefixLength(s1, s2, offset) {
@@ -71,7 +82,6 @@
       label,
       label2,
       line,
-      nodes,
       id;
 
     width = 400;
@@ -81,7 +91,6 @@
     n = 15;
     deg = 0;
 
-    nodes = [];
     while (nodes.length < n) {
       id = Math.floor(Math.random() * Math.pow(2, 6));
       if (!nodes.includes(id)) {
@@ -297,17 +306,25 @@
   function updateTree() {
     for (var i = 0; i < treeNodes.length; i++) {
       var node = treeNodes[i];
+      const nodeInGraph =
+        nodes.includes(bin2dec(node.attr("data-id"))) ||
+        node.attr("data-id").length < "0b000000".length;
       if (selectedNodeId === "") {
-        node.fill(noSelectedColor);
+        node.fill(nodeInGraph ? noSelectedColor : treeNodeNotInGraphColor);
+        node.stroke({ color: noSelectedColor, width: 2 });
       } else if (selectedNodeId.startsWith(node.attr("data-id"))) {
-        node.fill(selectedNodeColor);
+        node.fill(nodeInGraph ? selectedNodeColor : treeNodeNotInGraphColor);
+        node.stroke({ color: selectedNodeColor, width: 2 });
       } else {
         const commonPrefixLength = getCommonPrefixLength(
           selectedNodeId,
           node.attr("data-id"),
           offset
         );
-        node.fill(colors[commonPrefixLength]);
+        node.fill(
+          nodeInGraph ? colors[commonPrefixLength] : treeNodeNotInGraphColor
+        );
+        node.stroke({ color: colors[commonPrefixLength], width: 2 });
       }
     }
 
@@ -347,4 +364,5 @@
   // Initialize the DHT diagram.
   render_graph();
   render_tree();
+  updateTree();
 })(this);
