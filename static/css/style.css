@@ -78,7 +78,7 @@
 
 #final-results-container {
   padding: 10px;
-  background-color: #91b4ee;
+  background-color: #5ce876;
   border: 1px solid black;
   display: none;
   margin-bottom: 10px;
@@ -86,4 +86,8 @@
 
 #bottom-right-container {
   margin-bottom: 10px;
+}
+
+#update-kbucket-button {
+  display: none;
 }

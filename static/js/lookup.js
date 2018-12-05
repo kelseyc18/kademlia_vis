@@ -29,6 +29,8 @@
   const k = 4;
   const alpha = 3;
   const kBucketRects = {};
+  const alphaContactEdges = [];
+  var alphaContactEdgeGroup;
 
   const modalFramesPerRPC = 2;
 
@@ -60,6 +62,7 @@
   const bucketHeight = 60;
   const padding = 10;
 
+  var graphCanvas;
   var treeCanvas;
 
   function dec2bin(dec) {
@@ -78,6 +81,7 @@
   }
 
   function getCommonPrefixLength(s1, s2, offset) {
+    if (offset === undefined) offset = binaryPrefix.length;
     var index = offset;
     while (index < s1.length && s1[index] === s2[index]) {
       index++;
@@ -129,6 +133,14 @@
     return tokens.join(", ");
   }
 
+  function hasAnimation(kBucketOwner, kBucketIndex, candidateNode) {
+    return (
+      kBuckets[kBucketOwner][kBucketIndex].includes(candidateNode) &&
+      kBuckets[kBucketOwner][kBucketIndex].indexOf(candidateNode) <
+        kBuckets[kBucketOwner][kBucketIndex].length - 1
+    );
+  }
+
   // Renders the Kademlia graph.
   function render_graph() {
     var width,
@@ -165,11 +177,14 @@
     nodes.sort((a, b) => a - b);
 
     draw = SVG("graph");
+    graphCanvas = draw;
     draw.size(width, height);
     radius = width / 2 - padding * 2;
 
     pathGroup = draw.group();
     pathGroup.attr("id", "lookup-kademlia-paths");
+    alphaContactEdgeGroup = draw.group();
+    alphaContactEdgeGroup.attr("id", "lookup-kademlia-contact-paths");
     group = draw.group();
     group.translate(width / 2, height / 2);
     group.attr("id", "lookup-kademlia-nodes");
@@ -587,12 +602,13 @@
 
   function populateLocalNodeInfo() {
     $("#local-node-info").html(
-      `<p><b>Round ${roundNum}</b> contacts are <b>${idsToString(
+      `<p><b>Round ${roundNum}</b> contacts are <span style="color: ${idToFindTreeColor};"><b>${idsToString(
         alphaContacts
-      )}</b>.</p>`
+      )}</b></span>.</p>`
     );
     $("#local-node-info").show();
 
+    updateGraphWithAlphaContacts();
     $("#send-find-node-button").show();
     $("#send-find-node-button").html(
       `Send FIND_NODE RPC to Round ${roundNum} contacts`
@@ -690,11 +706,7 @@
     const firstContact =
       kBuckets[alphaContact][kBucketIndex] &&
       kBuckets[alphaContact][kBucketIndex][0];
-    if (
-      kBuckets[alphaContact][kBucketIndex].includes(originNodeId) &&
-      kBuckets[alphaContact][kBucketIndex].indexOf(originNodeId) <
-        kBuckets[alphaContact][kBucketIndex].length - 1
-    ) {
+    if (hasAnimation(alphaContact, kBucketIndex, originNodeId)) {
       $("#modal-button-container").show();
     } else {
       $("#modal-button-container").hide();
@@ -816,6 +828,7 @@
         $("#shortlist-container").show();
         updateTree();
         updateTreeWithClosestNodes();
+        updateTreeWithIdToFind();
 
         const newAlphaContacts = [];
 
@@ -859,8 +872,8 @@
             displayFinalKContacts();
             $("#send-find-node-button").hide();
           } else {
+            updateKBucketForOrigin(alphaContacts[0]);
             populateLocalNodeInfo();
-            $("#send-find-node-button").show();
           }
         }
         $("#rpc-response-container").show();
@@ -933,6 +946,34 @@
         });
       }
     }
+  }
+
+  function updateGraphWithAlphaContacts() {
+    alphaContactEdges.forEach(edge => edge.remove());
+
+    graphEdges.forEach(edge => {
+      const edgeClasses = edge.classes();
+      for (var i = 0; i < alphaContacts.length; i++) {
+        if (
+          edgeClasses.includes(alphaContacts[i]) &&
+          edgeClasses.includes(originNodeId)
+        ) {
+          const contactEdge = graphCanvas.line(
+            edge.attr("x1"),
+            edge.attr("y1"),
+            edge.attr("x2"),
+            edge.attr("y2")
+          );
+          contactEdge.stroke({
+            color: idToFindTreeColor,
+            width: 4,
+            dasharray: "5,5"
+          });
+          alphaContactEdges.push(contactEdge);
+          alphaContactEdgeGroup.add(contactEdge);
+        }
+      }
+    });
   }
 
   function updateTreeWithClosestNodes() {
