@@ -28,7 +28,7 @@
   const closestNodes = new Heap(maxHeapComparator);
 
   const minFrame = 0;
-  const maxFrame = 5;
+  const maxFrame = 6;
 
   const binaryPrefix = "0b";
   const offset = binaryPrefix.length;
@@ -64,6 +64,7 @@
   const selectedNodeColor = "#00CBFF";
   const selectedPathColor = "#00CBFF";
   const joiningNodeColor = "#00F893";
+  const rpcRecipientColor = "#6495ED";
 
   const noSelectedGraphNodeColor = "#EEE";
   const noSelectedColor = "#000";
@@ -71,6 +72,8 @@
 
   const idToFindTreeColor = "#133670";
   const closestNodesColor = "#2160c4";
+
+  const rpcMsgColor = "#000000";
 
   //-----------------
   // Helper functions
@@ -467,6 +470,40 @@
     });
   }
 
+  function drawSendRPC(fromDataId, toDataId) {
+    var fromNode, toNode;
+    for (var i = 0; i < graphNodes.length; i++) {
+      if (graphNodes[i].attr("data-id") === fromDataId) {
+        fromNode = graphNodes[i];
+      }
+      if (graphNodes[i].attr("data-id") === toDataId) {
+        toNode = graphNodes[i];
+      }
+    }
+
+    var draw = graphSVGDoc;
+    var startPos = getPos(draw.native(), fromNode.native());
+    var endPos = getPos(draw.native(), toNode.native());
+
+    var rpc = draw.circle(10);
+    rpc.fill(rpcMsgColor);
+    rpc.cx(startPos.x).cy(startPos.y);
+    rpc.animate({duration: '1500'}).move(endPos.x, endPos.y).loop();
+
+    if (fromNode.attr("data-id") !== joinNodeDataId) {
+      fromNode.fill(rpcRecipientColor);
+    }
+    if (toNode.attr("data-id") !== joinNodeDataId) {
+      toNode.fill(rpcRecipientColor);
+    }
+
+    // var line = draw.line(startPos.x, startPos.y, endPos.x, endPos.y);
+    // line.stroke({
+    //   color: rpcArrowColor,
+    //   width: 4,
+    //   linecap: "round"
+    // });
+  }
 
   //-----------------
   // Update functions
@@ -826,6 +863,9 @@
     nodeColors[joinNodeId] = joiningNodeColor;
   	render_graph(numNodes, frameNodes, nodeColors);
 
+    // Draw RPC from join node to known node
+    drawSendRPC(joinNodeDataId, knownNodeDataId);
+
     // Draw kbuckets for join node
     kBuckets[joinNodeDataId] = {};
     const commonPrefixLength = getCommonPrefixLength(
@@ -835,6 +875,32 @@
 
   	render_tree();
   	populateText("Step 5", `It sends a FIND_NODE RPC for itself, <b>${joinNodeDataId} (${joinNodeId})</b>, to the other node it knows, <b>${knownNodeDataId} (${knownNodeId})</b>`);
+  }
+
+  function frame6() {
+  	resetVariables();
+
+    // Draw graph with join node included
+    var frameNodes = nodes.slice(0);
+    frameNodes.push(joinNodeId);
+    var nodeColors = {};
+    nodeColors[joinNodeId] = joiningNodeColor;
+  	render_graph(numNodes, frameNodes, nodeColors);
+
+    // Draw RPC from join node to known node
+    drawSendRPC(knownNodeDataId, joinNodeDataId);
+
+    // Draw kbuckets for join node
+    kBuckets[joinNodeDataId] = {};
+    const commonPrefixLength = getCommonPrefixLength(
+      joinNodeDataId, knownNodeDataId, offset);
+    kBuckets[joinNodeDataId][commonPrefixLength] = [knownNodeDataId];
+    drawKBuckets("kbuckets", "kbuckets-title", joinNodeDataId, true);
+
+    // TODO update kbuckets
+
+  	render_tree();
+  	populateText("Step 6", `When the joining node receives a response from <b>${knownNodeDataId} (${knownNodeId})</b>, it updates its k-buckets.`);
   }
 
   function frame10() {
@@ -857,7 +923,8 @@
       frame2,
       frame3,
       frame4,
-      frame5
+      frame5,
+      frame6
     ]
     return frames[i];
   }

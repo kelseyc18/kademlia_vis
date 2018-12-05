@@ -722,10 +722,10 @@
       }
       ${
         !containsContact && isFull
-          ? `<li>The bucket is full, so the RPC recipient pings the contact 
+          ? `<li>The bucket is full, so the RPC recipient pings the contact
       at the head of the bucket's list, ${firstContact} (${bin2dec(
               firstContact
-            )}). As long as this least recently seen contact responds within 
+            )}). As long as this least recently seen contact responds within
       a reasonable time, the new contact is ignored. Otherwise, the new contact is added at the tail.</li>`
           : ""
       }
