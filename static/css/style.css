@@ -91,3 +91,7 @@
 #update-kbucket-button {
   display: none;
 }
+
+#modal-previous-btn {
+  display: none;
+}

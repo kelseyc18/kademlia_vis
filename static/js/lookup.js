@@ -135,9 +135,10 @@
 
   function hasAnimation(kBucketOwner, kBucketIndex, candidateNode) {
     return (
-      kBuckets[kBucketOwner][kBucketIndex].includes(candidateNode) &&
-      kBuckets[kBucketOwner][kBucketIndex].indexOf(candidateNode) <
-        kBuckets[kBucketOwner][kBucketIndex].length - 1
+      (kBuckets[kBucketOwner][kBucketIndex].includes(candidateNode) &&
+        kBuckets[kBucketOwner][kBucketIndex].indexOf(candidateNode) <
+          kBuckets[kBucketOwner][kBucketIndex].length - 1) ||
+      !kBuckets[kBucketOwner][kBucketIndex].includes(candidateNode)
     );
   }
 
@@ -627,7 +628,12 @@
 
   function populateModal() {
     if (currentModalFrame > 0) {
-      $("#modal-previous-btn").show();
+      // $("#modal-previous-btn").show();
+      $("#modal-previous-btn").one("click", () => {
+        currentModalFrame -= 1;
+        populateModal();
+        $("modal-next-btn").off();
+      });
     }
 
     const alphaContactIndex = Math.floor(currentModalFrame / modalFramesPerRPC);
@@ -679,6 +685,7 @@
     // Show second step when user clicks Next button
     $("#modal-next-btn").one("click", () => {
       currentModalFrame += 1;
+      $("#modal-previous-btn").off();
       populateModal();
     });
   }
@@ -732,7 +739,7 @@
       );
       $("#view-animation-button").prop("disabled", false);
     });
-    $("#modal-previous-btn").show();
+    // $("#modal-previous-btn").show();
     $("#find-node-modal-step").html("<p><b>Step 2</b></p>");
     $("#find-node-modal-body-2").html(
       `<p>The RPC recipient updates its k-bucket corresponding to the RPC sender <span style="background-color: ${
@@ -753,8 +760,8 @@
           ? `<li>The bucket is full, so the RPC recipient pings the contact
       at the head of the bucket's list, ${firstContact} (${bin2dec(
               firstContact
-            )}). As long as this least recently seen contact responds within
-      a reasonable time, the new contact is ignored. Otherwise, the new contact is added at the tail.</li>`
+            )}). The least recently seen contact responds within
+      a reasonable time, so it is moved to the tail. The new contact is ignored.</li>`
           : ""
       }
       </ul></p>`
@@ -763,12 +770,14 @@
     if (alphaContactIndex + 1 < alphaContacts.length) {
       $("#modal-next-btn").one("click", () => {
         currentModalFrame += 1;
+        $("#modal-previous-btn").off();
         populateModal();
       });
     } else {
       $("#send-find-node-button").off();
       $("#modal-next-btn").html("Finish");
       $("#modal-next-btn").one("click", () => {
+        $("#modal-previous-btn").off();
         $("#find-node-modal").modal("hide");
         var nodesReturned = [];
         var kClosestUpdated = false;
@@ -829,6 +838,7 @@
         updateTree();
         updateTreeWithClosestNodes();
         updateTreeWithIdToFind();
+        updateOriginKBuckets(alphaContacts);
 
         const newAlphaContacts = [];
 
@@ -872,13 +882,40 @@
             displayFinalKContacts();
             $("#send-find-node-button").hide();
           } else {
-            updateKBucketForOrigin(alphaContacts[0]);
             populateLocalNodeInfo();
           }
         }
         $("#rpc-response-container").show();
       });
     }
+  }
+
+  function updateOriginKBuckets(alphaContacts) {
+    alphaContacts.forEach(contactId => {
+      const kBucketIndex = getCommonPrefixLength(
+        contactId,
+        originNodeId,
+        offset
+      );
+      if (kBuckets[originNodeId][kBucketIndex].includes(contactId)) {
+        // Move contactId to end
+        const contactIndex = kBuckets[originNodeId][kBucketIndex].indexOf(
+          contactId
+        );
+        kBuckets[originNodeId][kBucketIndex].splice(contactIndex, 1);
+        kBuckets[originNodeId][kBucketIndex].push(contactId);
+      } else if (kBuckets[originNodeId][kBucketIndex].length < k) {
+        // Add contactId to end
+        kBuckets[originNodeId][kBucketIndex].push(contactId);
+      } else {
+        // Ping first node in bucket and move to end
+        const firstId = kBuckets[originNodeId][kBucketIndex][0];
+        kBuckets[originNodeId][kBucketIndex].splice(0, 1);
+        kBuckets[originNodeId][kBucketIndex].push(firstId);
+      }
+    });
+
+    drawKBuckets("kbuckets", "kbuckets-title", originNodeId, false);
   }
 
   function displayFinalKContacts() {
@@ -995,41 +1032,44 @@
     }
   }
 
+  // If `nodeToMove` is in the k-bucket, moves `nodeToMove` to tail of list.
+  // Otherwise, moves first node in k-bucket to tail of list.
   function animateKBucketUpdate(svgId, nodeToMove, ownerNode, kBucketIndex) {
-    const shapes = kBucketRects[svgId][nodeToMove];
-    const nodeToMoveId = shapes ? shapes[0].attr("data-id") : null;
-
     if (
-      nodeToMoveId &&
-      kBuckets[ownerNode][kBucketIndex].indexOf(nodeToMoveId) <
-        kBuckets[ownerNode][kBucketIndex].length - 1
+      !kBuckets[ownerNode][kBucketIndex].includes(nodeToMove) &&
+      kBuckets[ownerNode][kBucketIndex].length === k
     ) {
-      shapes.forEach(shape => shape.animate().attr({ opacity: 0 }));
-
-      // Shift remaining elements to the left
-      const selectedKBucket = kBuckets[ownerNode][kBucketIndex];
-      var shift = false;
-      for (var i = 0; i < selectedKBucket.length; i++) {
-        if (shift) {
-          const shapesToShift = kBucketRects[svgId][selectedKBucket[i]];
-          shapesToShift.forEach(shape =>
-            shape.animate().x(shape.x() - bucketWidth - padding)
-          );
-        }
-        if (selectedKBucket[i] === nodeToMoveId) shift = true;
-      }
-
-      const diff =
-        kBuckets[ownerNode][kBucketIndex].length -
-        kBuckets[ownerNode][kBucketIndex].indexOf(nodeToMoveId) -
-        1;
-      shapes.forEach(shape =>
-        shape
-          .animate()
-          .attr({ opacity: 1 })
-          .x(shape.x() + (bucketWidth + padding) * diff)
-      );
+      // Move first element to the tail
+      nodeToMove = kBuckets[ownerNode][kBucketIndex][0];
     }
+
+    const shapes = kBucketRects[svgId][nodeToMove];
+
+    shapes.forEach(shape => shape.animate().attr({ opacity: 0 }));
+
+    // Shift remaining elements to the left
+    const selectedKBucket = kBuckets[ownerNode][kBucketIndex];
+    var shift = false;
+    for (var i = 0; i < selectedKBucket.length; i++) {
+      if (shift) {
+        const shapesToShift = kBucketRects[svgId][selectedKBucket[i]];
+        shapesToShift.forEach(shape =>
+          shape.animate().x(shape.x() - bucketWidth - padding)
+        );
+      }
+      if (selectedKBucket[i] === nodeToMove) shift = true;
+    }
+
+    const diff =
+      kBuckets[ownerNode][kBucketIndex].length -
+      kBuckets[ownerNode][kBucketIndex].indexOf(nodeToMove) -
+      1;
+    shapes.forEach(shape =>
+      shape
+        .animate()
+        .attr({ opacity: 1 })
+        .x(shape.x() + (bucketWidth + padding) * diff)
+    );
   }
 
   function onNodeClicked(e) {
@@ -1047,49 +1087,51 @@
     updateTree();
     updateGraph();
 
-    // setTimeout(() => {
-    //   while (idToFind === "") {
-    //     idToFind = prompt(
-    //       "What ID would you like to look up (e.g. 0b101111 or 47)?",
-    //       originNodeId === "0b101111" || originNodeId === "47"
-    //         ? "0b101110"
-    //         : "0b101111"
-    //     );
+    setTimeout(() => {
+      while (idToFind === "") {
+        idToFind = prompt(
+          "What ID would you like to look up (e.g. 0b101111 or 47)?",
+          originNodeId === "0b101111" || originNodeId === "47"
+            ? "0b101110"
+            : "0b101111"
+        );
 
-    //     if (idToFind.startsWith(binaryPrefix)) {
-    //       for (var i = offset; i < idToFind.length; i++) {
-    //         if (
-    //           i >= "0b000000".length ||
-    //           (idToFind[i] !== "0" && idToFind[i] !== "1")
-    //         ) {
-    //           idToFind = "";
-    //           break;
-    //         }
-    //       }
-    //     } else {
-    //       if (idToFind < 0 || idToFind >= Math.pow(2, 6)) {
-    //         idToFind = "";
-    //       }
-    //     }
-    //   }
+        if (idToFind.startsWith(binaryPrefix)) {
+          for (var i = offset; i < idToFind.length; i++) {
+            if (
+              i >= "0b000000".length ||
+              (idToFind[i] !== "0" && idToFind[i] !== "1")
+            ) {
+              idToFind = "";
+              break;
+            }
+          }
+        } else {
+          if (idToFind < 0 || idToFind >= Math.pow(2, 6)) {
+            idToFind = "";
+          }
+        }
+      }
 
-    // if (!idToFind.startsWith(binaryPrefix)) {
-    //   idToFind = binaryPrefix + dec2bin(idToFind);
-    // }
-    // document.getElementById(
-    //   "message"
-    // ).innerHTML = `<p>Looking up <b>ID ${idToFind} (${bin2dec(
-    //   idToFind
-    // )})</b> from <b>Node ${originNodeId}</b>.</p>`;
+      if (!idToFind.startsWith(binaryPrefix)) {
+        idToFind = binaryPrefix + dec2bin(idToFind);
+      }
+      document.getElementById(
+        "message"
+      ).innerHTML = `<p>Looking up <b>ID ${idToFind} (${bin2dec(
+        idToFind
+      )})</b> from <b>Node ${originNodeId}</b>.</p>`;
 
-    //   updateTreeWithIdToFind();
-    //   drawKBuckets("kbuckets", "kbuckets-title", originNodeId);
-    // }, 1000);
-    idToFind = "0b101110";
-    updateTreeWithIdToFind();
-    drawKBuckets("kbuckets", "kbuckets-title", originNodeId);
-    populateAlphaContacts();
-    populateLocalNodeInfo();
+      updateTreeWithIdToFind();
+      drawKBuckets("kbuckets", "kbuckets-title", originNodeId);
+      populateAlphaContacts();
+      populateLocalNodeInfo();
+    }, 1000);
+    // idToFind = "0b101110";
+    // updateTreeWithIdToFind();
+    // drawKBuckets("kbuckets", "kbuckets-title", originNodeId);
+    // populateAlphaContacts();
+    // populateLocalNodeInfo();
   }
 
   function onNodeMouseOver(e) {
