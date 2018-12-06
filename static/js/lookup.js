@@ -968,7 +968,7 @@
       const node = treeNodes[i];
       if (node.attr("data-id") === idToFind) {
         node.fill(
-          node.attr("data-id") !== idToFind
+          nodes.includes(bin2dec(node.attr("data-id")))
             ? idToFindTreeColor
             : treeNodeNotInGraphColor
         );
