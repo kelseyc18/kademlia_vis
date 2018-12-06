@@ -123,14 +123,14 @@
     const tokens = [];
     heapArray.forEach(entry => {
       tokens.push(
-        `<b><span style="color: ${closestNodesColor}">${
+        `<li><b><span style="color: ${closestNodesColor}">${
           entry.nodeId
         } (${bin2dec(entry.nodeId)})</span></b> [${
           entry.contacted ? "contacted" : "not contacted"
-        }]`
+        }]</li>`
       );
     });
-    return tokens.join(", ");
+    return tokens.join("");
   }
 
   function hasAnimation(kBucketOwner, kBucketIndex, candidateNode) {
@@ -830,9 +830,9 @@
           ${nodesReturned.join("")}`
         );
         $("#shortlist-container").html(
-          `<p><b>k-closest nodes</b>: ${idsToStringContacted(
+          `<p><b>k-closest nodes</b>:</p><ul>${idsToStringContacted(
             closestNodes.toArray()
-          )}</p>`
+          )}</ul>`
         );
         $("#shortlist-container").show();
         updateTree();
@@ -1120,7 +1120,7 @@
         "message"
       ).innerHTML = `<p>Looking up <b>ID ${idToFind} (${bin2dec(
         idToFind
-      )})</b> from <b>Node ${originNodeId}</b>.</p>`;
+      )})</b> from <b>Node ${originNodeId} (${bin2dec(originNodeId)})</b>.</p>`;
 
       updateTreeWithIdToFind();
       drawKBuckets("kbuckets", "kbuckets-title", originNodeId);
