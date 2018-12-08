@@ -137,14 +137,41 @@
     const tokens = [];
     heapArray.forEach(entry => {
       tokens.push(
-        `<b><span style="color: ${closestNodesColor}">${
+        `<li><b><span style="color: ${closestNodesColor}">${
           entry.nodeId
         } (${bin2dec(entry.nodeId)})</span></b> [${
           entry.contacted ? "contacted" : "not contacted"
-        }]`
+        }]</li>`
       );
     });
-    return tokens.join(", ");
+    return tokens.join("");
+  }
+
+  function findKClosest(startNodeId, targetId, requesterId) {
+    const maxHeap = new Heap(maxHeapComparator);
+    const buckets = Object.values(kBuckets[startNodeId]);
+    for (var i = 0; i < buckets.length; i++) {
+      for (var j = 0; j < buckets[i].length; j++) {
+        const currentNode = buckets[i][j];
+
+        if (maxHeap.size() < k) {
+          maxHeap.push({
+            nodeId: currentNode,
+            distance: getDistance(currentNode, targetId)
+          });
+        } else if (
+          getDistance(currentNode, targetId) < maxHeap.peek().distance &&
+          currentNode !== requesterId
+        ) {
+          maxHeap.replace({
+            nodeId: currentNode,
+            distance: getDistance(currentNode, targetId)
+          });
+        }
+      }
+    }
+
+    return maxHeap.toArray().map(entry => entry.nodeId);
   }
 
   //-----------------
@@ -470,39 +497,113 @@
     });
   }
 
-  function drawSendRPC(fromDataId, toDataId) {
-    var fromNode, toNode;
+  function getNodeFromDataId(dataId) {
     for (var i = 0; i < graphNodes.length; i++) {
-      if (graphNodes[i].attr("data-id") === fromDataId) {
-        fromNode = graphNodes[i];
-      }
-      if (graphNodes[i].attr("data-id") === toDataId) {
-        toNode = graphNodes[i];
+      if (graphNodes[i].attr("data-id") === dataId) {
+        return graphNodes[i];
       }
     }
+    return null;
+  }
 
-    var draw = graphSVGDoc;
-    var startPos = getPos(draw.native(), fromNode.native());
-    var endPos = getPos(draw.native(), toNode.native());
-
-    var rpc = draw.circle(10);
-    rpc.fill(rpcMsgColor);
-    rpc.cx(startPos.x).cy(startPos.y);
-    rpc.animate({duration: '1500'}).move(endPos.x, endPos.y).loop();
-
+  function drawSendRPC(fromDataId, alphaContacts) {
+    // Color from node
+    var fromNode, toNode, toDataId, toNodes;
+    fromNode = getNodeFromDataId(fromDataId);
     if (fromNode.attr("data-id") !== joinNodeDataId) {
       fromNode.fill(rpcRecipientColor);
     }
-    if (toNode.attr("data-id") !== joinNodeDataId) {
-      toNode.fill(rpcRecipientColor);
+
+    // Color to nodes
+    toNodes = [];
+    for (var i = 0; i < alphaContacts.length; i++) {
+      toDataId = alphaContacts[i];
+      toNode = getNodeFromDataId(toDataId);
+      toNodes.push(toNode);
+      if (toNode.attr("data-id") !== joinNodeDataId) {
+        toNode.fill(rpcRecipientColor);
+      }
     }
 
-    // var line = draw.line(startPos.x, startPos.y, endPos.x, endPos.y);
-    // line.stroke({
-    //   color: rpcArrowColor,
-    //   width: 4,
-    //   linecap: "round"
-    // });
+    // Animate RPC's fromNode->toNodes and toNodes->fromNode
+    for (var i = 0; i < toNodes.length; i++) {
+      toNode = toNodes[i];
+
+      var draw = graphSVGDoc;
+      var startPos = getPos(draw.native(), fromNode.native());
+      var endPos = getPos(draw.native(), toNode.native());
+
+      var rpc = draw.circle(10);
+      rpc.fill(rpcMsgColor);
+      rpc.cx(startPos.x).cy(startPos.y);
+      rpc.animate({duration: '1500'}).move(endPos.x, endPos.y);
+      rpc.animate({duration: '1500'}).move(startPos.x, startPos.y).afterAll(function() {
+        this.hide();
+        drawRPCResults(alphaContacts);
+      });
+    }
+  }
+
+  function drawRPCResults(alphaContacts) {
+    var nodesReturned = [];
+    var kClosestUpdated = false;
+
+    alphaContacts.forEach(alphaContact => {
+      // Get k closest nodes in recipient node
+      const kClosest = findKClosest(alphaContact, joinNodeDataId, joinNodeDataId);
+      nodesReturned.push(
+        `<p><b>${alphaContact} (${bin2dec(
+          alphaContact
+        )})</b>: ${idsToString(kClosest)}</p>`
+      );
+
+      // Update k-closest local state on origin node
+      kClosest.forEach(nodeId => {
+        const distance = getDistance(nodeId, idToFind);
+
+        var notInHeap = true;
+        closestNodes.toArray().forEach(cnode => {
+          if (cnode.nodeId === nodeId) notInHeap = false;
+        });
+
+        if (notInHeap) {
+          if (closestNodes.size() < k) {
+            closestNodes.push({
+              nodeId,
+              distance,
+              contacted: false
+                // allContactedNodes.includes(nodeId) ||
+                // alphaContacts.includes(nodeId)
+            });
+            kClosestUpdated = true;
+          } else if (
+            distance < closestNodes.peek().distance &&
+            nodeId !== joinNodeDataId
+          ) {
+            closestNodes.replace({
+              nodeId,
+              distance,
+              contacted: false
+                // allContactedNodes.includes(nodeId) ||
+                // alphaContacts.includes(nodeId)
+            });
+            kClosestUpdated = true;
+          }
+        }
+      });
+
+      $("#rpc-response-container").html(
+        `<p><b>FIND_NODE Responses</b></p><p><i><b>Contact node</b>: k-closest nodes to target</i></p>
+        ${nodesReturned.join("")}`
+      );
+      $("#shortlist-container").html(
+        `<p><b>k-closest nodes</b>:</p><ul>${idsToStringContacted(
+          closestNodes.toArray()
+        )}</ul>`
+      );
+      $("#shortlist-container").show();
+      $("#rpc-response-container").show();
+    });
   }
 
   //-----------------
@@ -698,10 +799,9 @@
       }
       document.getElementById(
         "message"
-      ).innerHTML = `<p>Looking up <b>ID ${idToFind} (${parseInt(
-        idToFind.substring(binaryPrefix.length),
-        2
-      )})</b> from <b>Node ${originNodeId}</b>.</p>`;
+      ).innerHTML = `<p>Looking up <b>ID ${idToFind} (${bin2dec(
+        idToFind
+      )})</b> from <b>Node ${originNodeId} (${bin2dec(originNodeId)})</b>.</p>`;
 
       updateTreeWithIdToFind();
     }, 1000);
@@ -745,6 +845,8 @@
   	treeNodes = [];
   	treeEdges = [];
   	kBuckets = {};
+    $("#shortlist-container").hide();
+    $("#rpc-response-container").hide();
   }
 
   function frame0() {
@@ -761,6 +863,7 @@
   	populateText("Join Simulation", "Press Next to begin stepping through Join simulation.");
   }
 
+  // Add node ID to joining node
   function frame1() {
   	resetVariables();
 
@@ -795,6 +898,7 @@
   	populateText("Step 1", `The joining node is assigned a nodeID, <b>${joinNodeDataId} (${joinNodeId})</b>...`);
   }
 
+  // Add joining node to graph
   function frame2() {
   	resetVariables();
 
@@ -809,6 +913,7 @@
   	populateText("Step 2", `...and it is added to the node graph.`);
   }
 
+  // Initialize k-buckets for joining node
   function frame3() {
   	resetVariables();
 
@@ -832,6 +937,7 @@
   	populateText("Step 3", `The joining node's k-buckets table is initialized with another known node, <b>${knownNodeDataId} (${knownNodeId})</b>.`);
   }
 
+  // State that FIND_NODE will be performed
   function frame4() {
   	resetVariables();
 
@@ -853,6 +959,7 @@
   	populateText("Step 4", "The joining node performs <a href='../lookup/index.html'>Lookup</a> on itself in order to fill its k-buckets table.");
   }
 
+  // Send FIND_NODE RPC to initial contact and receive response
   function frame5() {
   	resetVariables();
 
@@ -863,20 +970,26 @@
     nodeColors[joinNodeId] = joiningNodeColor;
   	render_graph(numNodes, frameNodes, nodeColors);
 
-    // Draw RPC from join node to known node
-    drawSendRPC(joinNodeDataId, knownNodeDataId);
-
     // Draw kbuckets for join node
+    updateKBuckets();
     kBuckets[joinNodeDataId] = {};
     const commonPrefixLength = getCommonPrefixLength(
       joinNodeDataId, knownNodeDataId, offset);
     kBuckets[joinNodeDataId][commonPrefixLength] = [knownNodeDataId];
     drawKBuckets("kbuckets", "kbuckets-title", joinNodeDataId, true);
 
+    // Send RPC to known node and back
+    const alphaContacts = [knownNodeDataId];
+    drawSendRPC(joinNodeDataId, alphaContacts);
+
+    // Draw k closest based on RPC results
+    // drawRPCResults(alphaContacts);
+
   	render_tree();
-  	populateText("Step 5", `It sends a FIND_NODE RPC for itself, <b>${joinNodeDataId} (${joinNodeId})</b>, to the other node it knows, <b>${knownNodeDataId} (${knownNodeId})</b>`);
+  	populateText("Step 5", `It sends a FIND_NODE RPC for itself, <b>${joinNodeDataId} (${joinNodeId})</b>, to the other node it knows, <b>${knownNodeDataId} (${knownNodeId})</b>, and updates its k-closest nodes shortlist according to the results.`);
   }
 
+  // Update k closest based on received response
   function frame6() {
   	resetVariables();
 
@@ -887,8 +1000,35 @@
     nodeColors[joinNodeId] = joiningNodeColor;
   	render_graph(numNodes, frameNodes, nodeColors);
 
+    // Draw kbuckets for join node
+    updateKBuckets();
+    kBuckets[joinNodeDataId] = {};
+    const commonPrefixLength = getCommonPrefixLength(
+      joinNodeDataId, knownNodeDataId, offset);
+    kBuckets[joinNodeDataId][commonPrefixLength] = [knownNodeDataId];
+    drawKBuckets("kbuckets", "kbuckets-title", joinNodeDataId, true);
+
+    // Populate response
+    const alphaContacts = [knownNodeDataId];
+    drawRPCResults(alphaContacts);
+
+  	render_tree();
+  	populateText("Step 6", `When the joining node receives a response from <b>${knownNodeDataId} (${knownNodeId})</b>, it updates its k-closest nodes shortlist.`);
+  }
+
+  // Keep sending RPC's and updating k closest until complete
+  function frame7() {
+  	resetVariables();
+
+    // Draw graph with join node included
+    var frameNodes = nodes.slice(0);
+    frameNodes.push(joinNodeId);
+    var nodeColors = {};
+    nodeColors[joinNodeId] = joiningNodeColor;
+  	render_graph(numNodes, frameNodes, nodeColors);
+
     // Draw RPC from join node to known node
-    drawSendRPC(knownNodeDataId, joinNodeDataId);
+    // drawSendRPC(joinNodeDataId, ); // TODO START HERE
 
     // Draw kbuckets for join node
     kBuckets[joinNodeDataId] = {};
@@ -897,13 +1037,12 @@
     kBuckets[joinNodeDataId][commonPrefixLength] = [knownNodeDataId];
     drawKBuckets("kbuckets", "kbuckets-title", joinNodeDataId, true);
 
-    // TODO update kbuckets
-
   	render_tree();
-  	populateText("Step 6", `When the joining node receives a response from <b>${knownNodeDataId} (${knownNodeId})</b>, it updates its k-buckets.`);
+  	populateText("Step 7", `The joining node continues sending FIND_NODE RPC's according to the Lookup protocol and updating its k-closest nodes shortlist.`);
   }
 
-  function frame10() {
+  // Refresh buckets with
+  function frame8() {
     resetVariables();
 
     var frameNodes = nodes.slice(0);
@@ -913,7 +1052,7 @@
   	render_graph(numNodes, frameNodes, nodeColors);
 
     render_tree();
-    populateText("Step 10", "The joining node refreshes all its buckets with the information it has received.");
+    populateText("Step 8", "The joining node refreshes all its buckets with the information it has received.");
   }
 
   function getFrame(i) {
