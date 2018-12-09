@@ -267,13 +267,6 @@
       label2.attr("data-id", dataId);
       label2.attr("font-family", "Roboto");
       group2.add(label2);
-
-      circle.mouseover(onNodeMouseOver);
-      circle.mouseout(onNodeMouseOut);
-      label.mouseover(onNodeMouseOver);
-      label.mouseout(onNodeMouseOut);
-      label2.mouseover(onNodeMouseOver);
-      label2.mouseout(onNodeMouseOut);
     }
 
     // Draw the paths
@@ -508,7 +501,7 @@
     return null;
   }
 
-  function drawSendRPC(fromDataId) {
+  function drawSendRPC(fromDataId, alphaContacts, drawResults) {
     // Color from node
     var fromNode, toNode, toDataId, toNodes;
     fromNode = getNodeFromDataId(fromDataId);
@@ -541,7 +534,9 @@
       rpc.animate({duration: '1500'}).move(endPos.x, endPos.y);
       rpc.animate({duration: '1500'}).move(startPos.x, startPos.y).afterAll(function() {
         this.hide();
-        drawRPCResults();
+        if (drawResults) {
+          drawRPCResults();
+        }
       });
     }
   }
@@ -552,6 +547,7 @@
     console.log("top of drawRPCResults: alphaContacts=", alphaContacts);
 
     alphaContacts.forEach(alphaContact => {
+      console.log("in alpha contacts");
       // Get k closest nodes in recipient node
       const kClosest = findKClosest(alphaContact, joinNodeDataId, joinNodeDataId);
       nodesReturned.push(
@@ -595,6 +591,7 @@
         }
       });
 
+      console.log("updating html");
       $("#rpc-response-container").html(
         `<p><b>FIND_NODE Responses</b></p><p><i><b>Contact node</b>: k-closest nodes to target</i></p>
         ${nodesReturned.join("")}`
@@ -826,23 +823,6 @@
     }
   }
 
-  //----------------------
-  // Interaction functions
-  //----------------------
-  function onNodeMouseOver(e) {
-    if (originNodeId !== "") return;
-    selectedNodeId = e.target.getAttribute("data-id");
-    updateTree();
-    updateGraph();
-  }
-
-  function onNodeMouseOut() {
-    if (originNodeId !== "") return;
-    selectedNodeId = "";
-    updateTree();
-    updateGraph();
-  }
-
   //-----------------
   // Frame functions
   //-----------------
@@ -1008,7 +988,7 @@
 
     // Send RPC to known node and back
     alphaContacts = [knownNodeDataId];
-    drawSendRPC(joinNodeDataId);
+    drawSendRPC(joinNodeDataId, alphaContacts, true);
 
   	render_tree();
   	populateText("Step 5", `It sends a FIND_NODE RPC for itself, <b>${joinNodeDataId} (${joinNodeId})</b>, to the other node it knows, <b>${knownNodeDataId} (${knownNodeId})</b>, and updates its k-closest nodes shortlist according to the results.`);
@@ -1053,7 +1033,7 @@
       alphaContacts.push(binaryPrefix + dec2bin(roundTwoAlphaContacts[i]));
     }
     console.log("alphaContacts:", alphaContacts);
-    drawSendRPC(joinNodeDataId);
+    drawSendRPC(joinNodeDataId, alphaContacts, true);
 
   	render_tree();
   	populateText("Step 6", `The joining node continues sending FIND_NODE RPC's according to the Lookup protocol and updating its k-closest nodes shortlist.`);
