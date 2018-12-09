@@ -79,6 +79,7 @@
 
   const idToFindTreeColor = "#133670";
   const closestNodesColor = "#2160c4";
+  const treeNodeNotInGraphColor = "#FFFFFF";
 
   const rpcMsgColor = "#000000";
 
@@ -409,6 +410,9 @@
       highlightGroup,
       highlightRect;
 
+    $("#kbuckets-title").show();
+    $("#kbuckets").show();
+
     document.getElementById(
       titleId
     ).innerHTML = `<b>k-buckets for ${kbucketsForNodeId} (${bin2dec(
@@ -654,6 +658,7 @@
           // populateLocalNodeInfo();
         }
       }
+      $("#local-node-info").show();
       $("#rpc-response-container").show();
     });
     console.log("bottom of drawRPCResults: alphaContacts=", alphaContacts);
@@ -679,42 +684,39 @@
   // Update functions
   //-----------------
   function updateTree() {
-    var index;
-
     for (var i = 0; i < treeNodes.length; i++) {
       var node = treeNodes[i];
-      if (selectedNodeId === "") {
-        node.fill(noSelectedColor);
-      } else if (selectedNodeId.startsWith(node.attr("data-id"))) {
-        node.fill(selectedNodeColor);
+      const nodeInGraph =
+        nodes.includes(bin2dec(node.attr("data-id"))) ||
+        node.attr("data-id").length < "0b000000".length;
+      if (joinNodeDataId.startsWith(node.attr("data-id"))) {
+        node.fill(nodeInGraph ? selectedNodeColor : treeNodeNotInGraphColor);
+        node.stroke({ color: selectedNodeColor, width: 2 });
       } else {
-        index = offset;
-        while (
-          index < selectedNodeId.length &&
-          selectedNodeId[index] === node.attr("data-id")[index]
-        ) {
-          index++;
-        }
-        node.fill(colors[index - offset]);
+        const commonPrefixLength = getCommonPrefixLength(
+          joinNodeDataId,
+          node.attr("data-id"),
+          offset
+        );
+        node.fill(
+          nodeInGraph ? colors[commonPrefixLength] : treeNodeNotInGraphColor
+        );
+        node.stroke({ color: colors[commonPrefixLength], width: 2 });
       }
     }
 
     for (i = 0; i < treeEdges.length; i++) {
       var edge = treeEdges[i];
-      if (selectedNodeId === "") {
-        edge.stroke({ color: noSelectedColor, width: 2, linecap: "round" });
-      } else if (selectedNodeId.startsWith(edge.attr("data-id"))) {
+      if (joinNodeDataId.startsWith(edge.attr("data-id"))) {
         edge.stroke({ color: selectedPathColor, width: 10, linecap: "round" });
       } else {
-        index = offset;
-        while (
-          index < selectedNodeId.length &&
-          selectedNodeId[index] === edge.attr("data-id")[index]
-        ) {
-          index++;
-        }
+        const commonPrefixLength = getCommonPrefixLength(
+          joinNodeDataId,
+          edge.attr("data-id"),
+          offset
+        );
         edge.stroke({
-          color: colors[index - offset],
+          color: colors[commonPrefixLength],
           width: 4,
           linecap: "round"
         });
@@ -754,8 +756,40 @@
   function updateTreeWithIdToFind() {
     for (var i = 0; i < treeNodes.length; i++) {
       const node = treeNodes[i];
-      if (node.attr("data-id") === idToFind) {
-        node.fill(idToFindTreeColor);
+      if (node.attr("data-id") === joinNodeDataId) {
+        node.fill(
+          nodes.includes(bin2dec(node.attr("data-id")))
+            ? idToFindTreeColor
+            : treeNodeNotInGraphColor
+        );
+        node.stroke({ color: idToFindTreeColor, width: 2 });
+        const polyline = treeSVGDoc.polyline("0,30 0,0 -10,15 0,0 10,15");
+        polyline.fill("none").move(node.cx() - padding, node.cy() + padding);
+        polyline.stroke({
+          color: idToFindTreeColor,
+          width: 4,
+          linecap: "round",
+          linejoin: "round"
+        });
+      }
+    }
+  }
+
+  function updateTreeWithClosestNodes() {
+    for (var i = 0; i < treeNodes.length; i++) {
+      const node = treeNodes[i];
+      if (node.attr("data-id") !== joinNodeDataId) {
+        var isClosest = false;
+        closestNodes.toArray().forEach(cnode => {
+          if (node.attr("data-id") === cnode.nodeId) {
+            isClosest = true;
+          }
+        });
+
+        if (isClosest) {
+          node.fill(closestNodesColor);
+          node.stroke({ color: closestNodesColor, width: 2 });
+        }
       }
     }
   }
@@ -843,6 +877,8 @@
     alphaContacts = [];
     allContactedNodes = [];
     closestNodes = new Heap(maxHeapComparator);
+    $("#kbuckets-title").hide();
+    $("#kbuckets").hide();
     $("#shortlist-container").hide();
     $("#rpc-response-container").hide();
     $("#local-node-info").hide();
@@ -936,6 +972,7 @@
 
     updateGraph();
   	render_tree();
+    updateTree();
   	populateText("Step 3", `The joining node's k-buckets table is initialized with another known node, <b>${knownNodeDataId} (${knownNodeId})</b>.`);
   }
 
@@ -960,6 +997,8 @@
 
     updateGraph();
   	render_tree();
+    updateTree();
+    updateTreeWithIdToFind();
   	populateText("Step 4", "The joining node performs <a href='../lookup/index.html'>Lookup</a> on itself in order to fill its k-buckets table.");
   }
 
@@ -989,6 +1028,8 @@
 
     updateGraph();
   	render_tree();
+    updateTree();
+    updateTreeWithIdToFind();
   	populateText("Step 5", `It sends a FIND_NODE RPC for itself, <b>${joinNodeDataId} (${joinNodeId})</b>, to the other node it knows, <b>${knownNodeDataId} (${knownNodeId})</b>, and updates its k-closest nodes shortlist according to the results.`);
   }
 
@@ -1025,15 +1066,15 @@
     for (var i=0; i < roundTwoContactedNodes.length; i++) {
       allContactedNodes.push(binaryPrefix + dec2bin(roundTwoContactedNodes[i]));
     }
-    console.log("allContactedNodes:", allContactedNodes);
     for (var i=0; i < roundTwoAlphaContacts.length; i++) {
       alphaContacts.push(binaryPrefix + dec2bin(roundTwoAlphaContacts[i]));
     }
-    console.log("alphaContacts:", alphaContacts);
     drawSendRPC(joinNodeDataId, alphaContacts, true);
 
     updateGraph();
   	render_tree();
+    updateTree();
+    updateTreeWithIdToFind();
   	populateText("Step 6", `The joining node continues sending FIND_NODE RPC's according to the Lookup protocol and updating its k-closest nodes shortlist.`);
   }
 
@@ -1064,9 +1105,22 @@
     }
     drawKBuckets("kbuckets", "kbuckets-title", joinNodeDataId, true);
 
+    for (var i=0; i < roundTwoClosestNodes.length; i++) {
+      var nodeId = binaryPrefix + dec2bin(roundTwoClosestNodes[i]);
+      const distance = getDistance(nodeId, joinNodeDataId);
+      closestNodes.push({
+        nodeId,
+        distance,
+        contacted:false
+      });
+    }
+
     updateGraph();
   	render_tree();
-    populateText("Step 7", `The joining node refreshes all its buckets based on the information it has received.`);
+    updateTree();
+    updateTreeWithIdToFind();
+    updateTreeWithClosestNodes();
+    populateText("Step 7", `The joining node refreshes all its buckets based on the information it has received. It has now completed the Join protocol.`);
   }
 
   function getFrame(i) {
