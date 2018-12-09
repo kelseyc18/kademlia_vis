@@ -14,10 +14,9 @@
   var treeEdges = [];
   var kBuckets = {};
   const kBucketRects = {};
-
   var roundNum = 1;
   var alphaContacts = [];
-  const allContactedNodes = [];
+  var allContactedNodes = [];
   const maxHeapComparator = (x, y) => {
     if (x.distance < y.distance) {
       return 1;
@@ -27,7 +26,7 @@
     }
     return 0;
   };
-  const closestNodes = new Heap(maxHeapComparator);
+  var closestNodes = new Heap(maxHeapComparator);
 
   const minFrame = 0;
   const maxFrame = 7;
@@ -40,6 +39,10 @@
   const joinNodeDataId = binaryPrefix + dec2bin(joinNodeId);
   var knownNodeId = 0;
   var knownNodeDataId = binaryPrefix + dec2bin(knownNodeId);
+  const roundTwoAlphaContacts = [11, 21, 31];
+  const roundTwoContactedNodes = [50];
+  const roundTwoClosestNodes = [1, 11, 21, 31];
+  const finalRoundKBuckets = [1, 11, 21, 31, 50];
 
   const k = 4;
   const alpha = 3;
@@ -267,13 +270,10 @@
 
       circle.mouseover(onNodeMouseOver);
       circle.mouseout(onNodeMouseOut);
-      circle.click(onNodeClicked);
       label.mouseover(onNodeMouseOver);
       label.mouseout(onNodeMouseOut);
-      label.click(onNodeClicked);
       label2.mouseover(onNodeMouseOver);
       label2.mouseout(onNodeMouseOut);
-      label2.click(onNodeClicked);
     }
 
     // Draw the paths
@@ -788,16 +788,20 @@
     }
   }
 
-  function updateKBuckets() {
+  function updateKBuckets(ignoreNodeId) {
     var nodeId, otherNodeId;
 
     for (var i = 0; i < graphNodes.length; i++) {
       nodeId = graphNodes[i].attr("data-id");
 
       kBuckets[nodeId] = {};
+
+      // populate kbuckets for nodeId
       for (var j = 0; j < graphNodes.length; j++) {
         otherNodeId = graphNodes[j].attr("data-id");
-        if (otherNodeId === nodeId) continue;
+        if ((otherNodeId === nodeId) || (otherNodeId === ignoreNodeId)) {
+          continue;
+        }
 
         const commonPrefixLength = getCommonPrefixLength(
           nodeId,
@@ -825,58 +829,6 @@
   //----------------------
   // Interaction functions
   //----------------------
-  function onNodeClicked(e) {
-    if (originNodeId !== "") return;
-    originNodeId = e.target.getAttribute("data-id");
-    document.getElementById(
-      "message"
-    ).innerHTML = `<p>You have selected Node <b>${originNodeId}</b> to originate the lookup.</p>`;
-    document.getElementById("message2").innerHTML = `
-    <p>We will use system-wide parameters <b><i>k</i> = 4</b> and <b><i>alpha</i> = 2</b>.</p>
-    <p><i>k</i> represents the max number of nodes in each k-bucket. <i>alpha</i> is the concurrency parameter.</p>`;
-    updateKBuckets();
-    updateTree();
-    updateGraph();
-
-    setTimeout(() => {
-      while (idToFind === "") {
-        idToFind = prompt(
-          "What ID would you like to look up (e.g. 0b101111 or 47)?",
-          originNodeId === "0b101111" || originNodeId === "47"
-            ? "0b101110"
-            : "0b101111"
-        );
-
-        if (idToFind.startsWith(binaryPrefix)) {
-          for (var i = offset; i < idToFind.length; i++) {
-            if (
-              i >= "0b000000".length ||
-              (idToFind[i] !== "0" && idToFind[i] !== "1")
-            ) {
-              idToFind = "";
-              break;
-            }
-          }
-        } else {
-          if (idToFind < 0 || idToFind >= Math.pow(2, 6)) {
-            idToFind = "";
-          }
-        }
-      }
-
-      if (!idToFind.startsWith(binaryPrefix)) {
-        idToFind = binaryPrefix + dec2bin(idToFind);
-      }
-      document.getElementById(
-        "message"
-      ).innerHTML = `<p>Looking up <b>ID ${idToFind} (${bin2dec(
-        idToFind
-      )})</b> from <b>Node ${originNodeId} (${bin2dec(originNodeId)})</b>.</p>`;
-
-      updateTreeWithIdToFind();
-    }, 1000);
-  }
-
   function onNodeMouseOver(e) {
     if (originNodeId !== "") return;
     selectedNodeId = e.target.getAttribute("data-id");
@@ -915,8 +867,13 @@
   	treeNodes = [];
   	treeEdges = [];
   	kBuckets = {};
+    alphaContacts = [];
+    allContactedNodes = [];
+    closestNodes = new Heap(maxHeapComparator);
     $("#shortlist-container").hide();
     $("#rpc-response-container").hide();
+    $("#local-node-info").hide();
+    $("#final-results-container").hide();
   }
 
   function frame0() {
@@ -1041,8 +998,9 @@
   	render_graph(numNodes, frameNodes, nodeColors);
 
     // Draw kbuckets for join node
-    updateKBuckets();
-    kBuckets[joinNodeDataId] = {};
+    updateKBuckets(joinNodeDataId); // no one else knows about joinNode yet
+
+    kBuckets[joinNodeDataId] = {}; // joinNode only has knownNode in its kbuckets
     const commonPrefixLength = getCommonPrefixLength(
       joinNodeDataId, knownNodeDataId, offset);
     kBuckets[joinNodeDataId][commonPrefixLength] = [knownNodeDataId];
@@ -1068,14 +1026,33 @@
   	render_graph(numNodes, frameNodes, nodeColors);
 
     // Draw kbuckets for join node
-    updateKBuckets();
-    kBuckets[joinNodeDataId] = {};
-    const commonPrefixLength = getCommonPrefixLength(
+    var commonPrefixLength;
+    updateKBuckets(joinNodeDataId); // no one else knows about joinNode yet
+
+    kBuckets[joinNodeDataId] = {}; // joinNode only knows knownNode
+    commonPrefixLength = getCommonPrefixLength(
       joinNodeDataId, knownNodeDataId, offset);
     kBuckets[joinNodeDataId][commonPrefixLength] = [knownNodeDataId];
     drawKBuckets("kbuckets", "kbuckets-title", joinNodeDataId, true);
 
     // Draw RPC to next alpha nodes
+    for (var i=0; i < roundTwoClosestNodes.length; i++) {
+      var nodeId = binaryPrefix + dec2bin(roundTwoClosestNodes[i]);
+      const distance = getDistance(nodeId, joinNodeDataId);
+      closestNodes.push({
+        nodeId,
+        distance,
+        contacted:false
+      });
+    }
+    for (var i=0; i < roundTwoContactedNodes.length; i++) {
+      allContactedNodes.push(binaryPrefix + dec2bin(roundTwoContactedNodes[i]));
+    }
+    console.log("allContactedNodes:", allContactedNodes);
+    for (var i=0; i < roundTwoAlphaContacts.length; i++) {
+      alphaContacts.push(binaryPrefix + dec2bin(roundTwoAlphaContacts[i]));
+    }
+    console.log("alphaContacts:", alphaContacts);
     drawSendRPC(joinNodeDataId);
 
   	render_tree();
@@ -1094,7 +1071,20 @@
   	render_graph(numNodes, frameNodes, nodeColors);
 
     // Draw kbuckets for join node
-    updateKBuckets();
+    var commonPrefixLength;
+    kBuckets[joinNodeDataId] = {}; // populate joinNode k-buckets
+    for (var i=0; i < finalRoundKBuckets.length; i++) {
+      var nodeId = binaryPrefix + dec2bin(finalRoundKBuckets[i]);
+      console.log("adding kbucket:", finalRoundKBuckets[i], nodeId);
+      commonPrefixLength = getCommonPrefixLength(
+        joinNodeDataId, nodeId, offset);
+      if (!(commonPrefixLength in kBuckets[joinNodeDataId])) {
+        kBuckets[joinNodeDataId][commonPrefixLength] = [nodeId];
+      } else {
+        kBuckets[joinNodeDataId][commonPrefixLength].push(nodeId);
+      }
+    }
+    console.log("kbuckets:", kBuckets[joinNodeDataId]);
     drawKBuckets("kbuckets", "kbuckets-title", joinNodeDataId, true);
 
   	render_tree();

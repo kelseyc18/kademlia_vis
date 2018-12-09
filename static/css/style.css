@@ -95,3 +95,7 @@
 #modal-previous-btn {
   display: none;
 }
+
+#simulation-navigation {
+  margin-bottom: 20px;
+}
