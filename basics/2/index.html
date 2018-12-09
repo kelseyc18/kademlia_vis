@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!-- App Stylesheet -->
+    <link
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"
+      rel="stylesheet"
+      type="text/css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css?family=Roboto"
+      rel="stylesheet"
+    />
+    <link href="../../static/css/style.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/svg.js/2.6.6/svg.js"></script>
+    <script
+      src="https://code.jquery.com/jquery-3.3.1.min.js"
+      integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+      crossorigin="anonymous"
+    ></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.bundle.min.js"></script>
+    <title>Kademlia Visualization - Basics</title>
+    <meta
+      name="description"
+      content="Visualization of Kademlia DHT Algorithm"
+    />
+  </head>
+  <body>
+    <nav class="navbar navbar-light bg-light">
+      <a class="navbar-brand" href="#">Kademlia Visualization</a>
+    </nav>
+    <div class="kademlia-container">
+      <div class="row">
+        <div class="col-auto">
+          <div class="sidenav">
+            <a href="../../basics/" class="selected">Basics</a>
+            <a href="../../lookup/">Lookup</a> <a href="../join/">Join</a>
+          </div>
+        </div>
+
+        <div class="col">
+          <div>
+            <h1 id="basics-header">ID space</h1>
+            <div id="basics-content">
+              <p>
+                Every Kademlia <b>node</b> and <b>key</b> is identified by a
+                160-bit identifier.
+              </p>
+              <p>
+                For simplicity, we will be looking at a
+                <b>6-bit identifier space</b> for this visualization.
+              </p>
+              <p>
+                The 6-bit identifier space can be represented by a complete
+                binary tree with 2<sup>6</sup> leaves. Each leaf represents a
+                unique ID based on the "0" or "1" bit on each edge from the root
+                to the leaf.
+              </p>
+            </div>
+            <div id="selected-leaf-display"></div>
+            <div class="text-center"><div id="binary-tree"></div></div>
+          </div>
+
+          <div class="page-nav">
+            <nav aria-label="page navigation">
+              <ul class="pagination justify-content-center">
+                <li class="page-item">
+                  <a class="page-link" href="../1/">Previous</a>
+                </li>
+                <li class="page-item">
+                  <a class="page-link" href="../1/">1</a>
+                </li>
+                <li class="page-item active">
+                  <a class="page-link" href="../2/"
+                    >2 <span class="sr-only">(current)</span></a
+                  >
+                </li>
+                <li class="page-item">
+                  <a class="page-link" href="../3/">3</a>
+                </li>
+                <li class="page-item">
+                  <a class="page-link" href="../4/">4</a>
+                </li>
+                <li class="page-item">
+                  <a class="page-link" href="../5/">5</a>
+                </li>
+                <li class="page-item">
+                  <a class="page-link" href="../3/">Next</a>
+                </li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="../../static/js/basics2.js"></script>
+  </body>
+</html>

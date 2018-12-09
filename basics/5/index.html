@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!-- App Stylesheet -->
+    <link
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"
+      rel="stylesheet"
+      type="text/css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css?family=Roboto"
+      rel="stylesheet"
+    />
+    <link href="../../static/css/style.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/svg.js/2.6.6/svg.js"></script>
+    <script
+      src="https://code.jquery.com/jquery-3.3.1.min.js"
+      integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+      crossorigin="anonymous"
+    ></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.bundle.min.js"></script>
+    <title>Kademlia Visualization - Basics</title>
+    <meta
+      name="description"
+      content="Visualization of Kademlia DHT Algorithm"
+    />
+  </head>
+  <body>
+    <nav class="navbar navbar-light bg-light">
+      <a class="navbar-brand" href="#">Kademlia Visualization</a>
+    </nav>
+    <div class="kademlia-container">
+      <div class="row">
+        <div class="col-auto">
+          <div class="sidenav">
+            <a href="../../basics/" class="selected">Basics</a>
+            <a href="../../lookup/">Lookup</a> <a href="../../join/">Join</a>
+          </div>
+        </div>
+
+        <div class="col">
+          <div>
+            <h1 id="basics-header">RPC Types</h1>
+            <div id="basics-content">
+              <p>
+                The Kademlia protocol consists of four remote procedure calls
+                (RPCs): <code>PING</code>, <code>STORE</code>,
+                <code>FIND_NODE</code>, and <code>FIND_VALUE</code>.
+              </p>
+              <ul>
+                <li>
+                  The <code>PING</code> RPC probes a node to see if it is
+                  online.
+                </li>
+                <li>
+                  The <code>STORE</code> RPC instructs a node to store a [key,
+                  value] pair for later retrieval.
+                </li>
+                <li>
+                  The <code>FIND_NODE</code> RPC takes a 160-bit key as an
+                  argument. The recipient of the <code>FIND_NODE</code> RPC
+                  returns an (IP address, UDP port, Node ID) tuple for each of
+                  the k nodes closest to the target id.
+                </li>
+                <li>
+                  The <code>FIND_VALUE</code> RPC behaves like
+                  <code>FIND_NODE</code>, returning the k nodes closest to the
+                  target identifier with one exception – if the RPC recipient
+                  has received a <code>STORE</code> for the given key, it
+                  returns the stored value.
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="page-nav">
+            <nav aria-label="page navigation">
+              <ul class="pagination justify-content-center">
+                <li class="page-item">
+                  <a class="page-link" href="../4/">Previous</a>
+                </li>
+                <li class="page-item">
+                  <a class="page-link" href="../1/">1</a>
+                </li>
+                <li class="page-item">
+                  <a class="page-link" href="../2/">2</a>
+                </li>
+                <li class="page-item">
+                  <a class="page-link" href="../3/">3</a>
+                </li>
+                <li class="page-item">
+                  <a class="page-link" href="../4/">4</a>
+                </li>
+                <li class="page-item active">
+                  <a class="page-link" href="../5/">5</a>
+                </li>
+                <li class="page-item disabled">
+                  <a class="page-link" tabindex="-1" href="#">Next</a>
+                </li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

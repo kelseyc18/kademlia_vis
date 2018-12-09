@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!-- App Stylesheet -->
+    <link
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"
+      rel="stylesheet"
+      type="text/css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css?family=Roboto"
+      rel="stylesheet"
+    />
+    <link href="../../static/css/style.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/svg.js/2.6.6/svg.js"></script>
+    <script
+      src="https://code.jquery.com/jquery-3.3.1.min.js"
+      integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+      crossorigin="anonymous"
+    ></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.bundle.min.js"></script>
+    <title>Kademlia Visualization - Basics</title>
+    <meta
+      name="description"
+      content="Visualization of Kademlia DHT Algorithm"
+    />
+  </head>
+  <body>
+    <nav class="navbar navbar-light bg-light">
+      <a class="navbar-brand" href="#">Kademlia Visualization</a>
+    </nav>
+    <div class="kademlia-container">
+      <div class="row">
+        <div class="col-auto">
+          <div class="sidenav">
+            <a href="../../basics/" class="selected">Basics</a>
+            <a href="../../lookup/">Lookup</a> <a href="../join/">Join</a>
+          </div>
+        </div>
+
+        <div class="col">
+          <div>
+            <h1 id="basics-header">Distances for K-Buckets</h1>
+            <div id="basics-content">
+              <p>Each Kademlia node keeps a list of <i>n</i> <b>k-buckets</b>, where <i>n</i> is the number of bits in a key/node ID.</i></p>
+              <p>For <i>i</i> &lt;= 0 &lt; <i>n</i>, the <i>i</i>-th k-bucket for a node contains <b>up to <i>k</i> (IP address, UDP port, Node ID) triples for nodes of distance between 2<sup><i>i</i></sup> and 2<sup><i>i+1</i></sup> from itself</b>.</p>
+              <p>In other words, the nodes in <code>originNode</code>'s <i>i</i>-th k-bucket have IDs such that <code>longestCommonPrefixLength(originNode.id, kbucketNode.id) = i</code>.</p>
+            </div>
+            <div id="instructions-container">
+              <p><b><i>Hover over a leaf node to view the ID candidates for each k-bucket.</i></b></p>
+            </div>
+
+            <div class="row">
+              <div id="kbucket-table" class="col">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th scope="col">i<br>(longest common prefix length)</th>
+                      <th scope="col">distances from <code>originNode.id</code></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr id="row-0">
+                      <th scope="row">0</th>
+                      <td>[32..63]</td>
+                    </tr>
+                    <tr id="row-1">
+                      <th scope="row">1</th>
+                      <td>[16..31]</td>
+                    </tr>
+                    <tr id="row-2">
+                      <th scope="row">2</th>
+                      <td>[8..15]</td>
+                    </tr>
+                    <tr id="row-3">
+                      <th scope="row">3</th>
+                      <td>[4..7]</td>
+                    </tr>
+                    <tr id="row-4">
+                      <th scope="row">4</th>
+                      <td>[2..3]</td>
+                    </tr>
+                    <tr id="row-5">
+                      <th scope="row">5</th>
+                      <td>[1]</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="text-center col-auto"><div id="binary-tree"></div></div>
+            </div>
+          </div>
+
+          <div class="page-nav">
+            <nav aria-label="page navigation">
+              <ul class="pagination justify-content-center">
+                <li class="page-item">
+                  <a class="page-link" href="../2/">Previous</a>
+                </li>
+                <li class="page-item">
+                  <a class="page-link" href="../1/">1</a>
+                </li>
+                <li class="page-item">
+                  <a class="page-link" href="../2/">2</a>
+                </li>
+                <li class="page-item active">
+                  <a class="page-link" href="../3/"
+                    >3 <span class="sr-only">(current)</span></a
+                  >
+                </li>
+                <li class="page-item">
+                  <a class="page-link" href="../4/">4</a>
+                </li>
+                <li class="page-item">
+                  <a class="page-link" href="../5/">5</a>
+                </li>
+                <li class="page-item">
+                  <a class="page-link" href="../4/">Next</a>
+                </li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="../../static/js/basics3.js"></script>
+  </body>
+</html>

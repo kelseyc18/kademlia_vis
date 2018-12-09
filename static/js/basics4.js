@@ -2,6 +2,11 @@
 
 (() => {
   var selectedNodeId = "";
+  var clickedNodeId = "";
+
+  const k = 4;
+  const kBuckets = {};
+
   const graphNodes = [];
   const graphEdges = [];
   const treeNodes = [];
@@ -28,6 +33,10 @@
   const noSelectedLightColor = "#AAA";
 
   const treeNodeNotInGraphColor = "#FFFFFF";
+
+  const bucketWidth = 90;
+  const bucketHeight = 60;
+  const padding = 10;
 
   function dec2bin(dec) {
     const raw = (dec >>> 0).toString(2);
@@ -146,10 +155,13 @@
 
       circle.mouseover(onNodeMouseOver);
       circle.mouseout(onNodeMouseOut);
+      circle.click(onNodeClicked);
       label.mouseover(onNodeMouseOver);
       label.mouseout(onNodeMouseOut);
+      label.click(onNodeClicked);
       label2.mouseover(onNodeMouseOver);
       label2.mouseout(onNodeMouseOut);
+      label2.click(onNodeClicked);
     }
 
     // Draw the paths
@@ -274,6 +286,17 @@
           offset
         );
         node.fill(colors[commonPrefixLength]);
+
+        if (
+          clickedNodeId !== "" &&
+          !kBuckets[clickedNodeId][commonPrefixLength].includes(
+            node.attr("data-id")
+          )
+        ) {
+          node.opacity(0.3);
+        } else {
+          node.opacity(1);
+        }
       }
     }
 
@@ -297,6 +320,15 @@
           offset
         );
         edge.stroke({ color: colors[commonPrefixLength], width: 2 });
+
+        if (
+          clickedNodeId !== "" &&
+          !kBuckets[clickedNodeId][commonPrefixLength].includes(otherNodeId)
+        ) {
+          edge.opacity(0.3);
+        } else {
+          edge.opacity(1);
+        }
       } else {
         edge.stroke({ color: noSelectedLightColor, width: 1 });
       }
@@ -349,20 +381,134 @@
     }
   }
 
-  function onNodeMouseOver(e) {
-    selectedNodeId = e.target.getAttribute("data-id");
+  function updateKBuckets() {
+    var nodeId, otherNodeId;
+
+    for (var i = 0; i < graphNodes.length; i++) {
+      nodeId = graphNodes[i].attr("data-id");
+
+      kBuckets[nodeId] = {};
+      for (var j = 0; j < graphNodes.length; j++) {
+        otherNodeId = graphNodes[j].attr("data-id");
+        if (otherNodeId === nodeId) continue;
+
+        const commonPrefixLength = getCommonPrefixLength(
+          nodeId,
+          otherNodeId,
+          offset
+        );
+        if (!(commonPrefixLength in kBuckets[nodeId])) {
+          kBuckets[nodeId][commonPrefixLength] = [otherNodeId];
+        } else if (kBuckets[nodeId][commonPrefixLength].length < k) {
+          kBuckets[nodeId][commonPrefixLength].push(otherNodeId);
+        }
+      }
+    }
+  }
+
+  function drawKBuckets(kbucketsForNodeId) {
+    var draw, labelGroup, label, label2, rectGroup, rectangle, xPos, yPos;
+
+    if (kbucketsForNodeId === "") {
+      $("#k-buckets-title").hide();
+      $("#k-buckets").hide();
+      return;
+    }
+
+    $("#k-buckets-title").show();
+    $("#k-buckets").show();
+    $("#k-buckets-title").html(
+      `<b>Possible k-buckets for ${kbucketsForNodeId} (${bin2dec(
+        kbucketsForNodeId
+      )})</b>`
+    );
+
+    $("#k-buckets").empty();
+    draw = SVG("k-buckets");
+    rectGroup = draw.group();
+    labelGroup = draw.group();
+
+    const radius = 5;
+
+    draw.size(
+      (bucketWidth + padding) * k + padding,
+      (bucketHeight + padding) * 6
+    );
+
+    const entries = Object.entries(kBuckets[kbucketsForNodeId]);
+    entries.forEach(([commonPrefixLength, nodes]) => {
+      nodes.forEach((nodeId, nodeIndex) => {
+        xPos = nodeIndex * (bucketWidth + padding) + bucketWidth / 2 + padding;
+        yPos =
+          commonPrefixLength * (bucketHeight + padding) +
+          bucketHeight / 2 +
+          padding;
+
+        rectangle = draw
+          .rect(bucketWidth, bucketHeight)
+          .radius(radius)
+          .cx(xPos)
+          .cy(yPos)
+          .attr("data-id", nodeId)
+          .fill(colors[commonPrefixLength]);
+        rectGroup.add(rectangle);
+
+        label = draw.text(nodeId);
+        label.x(xPos - label.bbox().width / 2);
+        label.y(yPos - label.bbox().height / 2 - padding);
+        label.attr("data-id", nodeId);
+        label.attr("font-family", "Roboto");
+        labelGroup.add(label);
+
+        label2 = draw.text(`(${bin2dec(nodeId)})`);
+        label2.x(xPos - label2.bbox().width / 2);
+        label2.y(yPos - label2.bbox().height / 2 + padding);
+        label2.attr("data-id", nodeId);
+        label2.attr("font-family", "Roboto");
+        labelGroup.add(label2);
+      });
+    });
+  }
+
+  function resetVisualization() {
+    clickedNodeId = "";
+    selectedNodeId = "";
+    drawKBuckets(clickedNodeId);
     updateTree();
     updateGraph();
   }
 
+  function onNodeMouseOver(e) {
+    if (clickedNodeId === "") {
+      selectedNodeId = e.target.getAttribute("data-id");
+      updateTree();
+      updateGraph();
+    }
+  }
+
   function onNodeMouseOut() {
-    selectedNodeId = "";
-    updateTree();
+    if (clickedNodeId === "") {
+      selectedNodeId = "";
+      updateTree();
+      updateGraph();
+    }
+  }
+
+  function onNodeClicked(e) {
+    clickedNodeId = e.target.getAttribute("data-id");
+    drawKBuckets(clickedNodeId);
     updateGraph();
+    $("#reset-kbuckets-button").show();
   }
 
   // Initialize the DHT diagram.
   render_graph();
   render_tree();
+  updateKBuckets();
   updateTree();
+
+  $("#reset-kbuckets-button").on("click", () => {
+    resetVisualization();
+    $("#reset-kbuckets-button").hide();
+  });
 })(this);
