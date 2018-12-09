@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!-- App Stylesheet -->
+    <link
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"
+      rel="stylesheet"
+      type="text/css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css?family=Roboto"
+      rel="stylesheet"
+    />
+    <link href="../../static/css/style.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/svg.js/2.6.6/svg.js"></script>
+    <script
+      src="https://code.jquery.com/jquery-3.3.1.min.js"
+      integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+      crossorigin="anonymous"
+    ></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.bundle.min.js"></script>
+    <title>Kademlia Visualization - Basics</title>
+    <meta
+      name="description"
+      content="Visualization of Kademlia DHT Algorithm"
+    />
+  </head>
+  <body>
+    <nav class="navbar navbar-light bg-light">
+      <a class="navbar-brand" href="#">Kademlia Visualization</a>
+    </nav>
+    <div class="kademlia-container">
+      <div class="row">
+        <div class="col-auto">
+          <div class="sidenav">
+            <a href="../../basics/" class="selected">Basics</a>
+            <a href="../../lookup/">Lookup</a> <a href="../../join/">Join</a>
+          </div>
+        </div>
+
+        <div class="col">
+          <div>
+            <h1 id="basics-header">K-Buckets</h1>
+            <div id="basics-content">
+              <p>
+                Most networks will not have a node with every ID in the
+                identifier space.
+              </p>
+              <p>
+                Although there may be many candidate nodes for a certain
+                k-bucket,
+                <b
+                  >the maximum number of nodes represented in a k-bucket is
+                  <i>k</i></b
+                >.
+              </p>
+              <p>
+                In this visualization, <b>k = 4</b>. That is, there can be no
+                more than 4 nodes in each k-bucket.
+              </p>
+              <p>
+                <b
+                  ><i
+                    >Hover on a node in the graph to see the candidate nodes in
+                    the network for each of the node's k-buckets.<br />Click on
+                    a node to see a possible snapshot of its k-buckets.</i
+                  ></b
+                >
+              </p>
+            </div>
+          </div>
+
+          <div class="col">
+            <div class="row">
+              <div class="col text-center">
+                <div id="graph" class="text-center"></div>
+                <button
+                  class="btn btn-outline-primary btn-sm"
+                  type="button"
+                  id="reset-kbuckets-button"
+                >
+                  Reset
+                </button>
+              </div>
+              <div class="col">
+                <div id="binary-tree" class="text-center"></div>
+                <p>
+                  Note: Filled-in leaves in the binary tree indicate that a node
+                  in the network has been assigned that identifier. Leaves that
+                  are not filled in represent valid identifiers, but none of the
+                  nodes have that specific ID.
+                </p>
+              </div>
+            </div>
+            <div id="k-buckets-title"></div>
+            <div id="k-buckets"></div>
+          </div>
+
+          <div class="page-nav">
+            <nav aria-label="page navigation">
+              <ul class="pagination justify-content-center">
+                <li class="page-item">
+                  <a class="page-link" href="../3/">Previous</a>
+                </li>
+                <li class="page-item">
+                  <a class="page-link" href="../1/">1</a>
+                </li>
+                <li class="page-item">
+                  <a class="page-link" href="../2/">2</a>
+                </li>
+                <li class="page-item">
+                  <a class="page-link" href="../3/">3</a>
+                </li>
+                <li class="page-item active">
+                  <a class="page-link" href="../4/">4</a>
+                </li>
+                <li class="page-item">
+                  <a class="page-link" href="../5/">5</a>
+                </li>
+                <li class="page-item">
+                  <a class="page-link" href="../5/">Next</a>
+                </li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="../../static/js/basics4.js"></script>
+  </body>
+</html>

@@ -46,6 +46,10 @@
   }
 }
 
+.page-nav {
+  margin-top: 50px;
+}
+
 #modal-button-container {
   margin-top: 10px;
   margin-bottom: 10px;
@@ -98,4 +102,22 @@
 
 #simulation-navigation {
   margin-bottom: 20px;
+}
+
+#selected-leaf-display {
+  border: 1px solid black;
+  padding: 10px;
+  background-color: #ccf4ff;
+}
+
+#kbucket-table {
+  max-width: 300px;
+}
+
+#instructions-container {
+  margin-top: 50px;
+}
+
+#reset-kbuckets-button {
+  display: none;
 }

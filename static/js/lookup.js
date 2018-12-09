@@ -331,6 +331,7 @@
       }
       if (newChildren.length === 1) {
         label = draw.text("0");
+        label.attr("font-family", "Roboto");
         label.x(
           (child1Pos.x + parentPos.x) / 2 - label.native().getBBox().width * 2
         );
@@ -340,6 +341,7 @@
         group.add(label);
 
         label = draw.text("1");
+        label.attr("font-family", "Roboto");
         label.x(
           (child2Pos.x + parentPos.x) / 2 + label.native().getBBox().width * 2
         );
