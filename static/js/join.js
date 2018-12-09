@@ -17,6 +17,8 @@
   var roundNum = 1;
   var alphaContacts = [];
   var allContactedNodes = [];
+  const alphaContactEdges = [];
+  var alphaContactEdgeGroup;
   const maxHeapComparator = (x, y) => {
     if (x.distance < y.distance) {
       return 1;
@@ -68,7 +70,7 @@
   ];
   const selectedNodeColor = "#00CBFF";
   const selectedPathColor = "#00CBFF";
-  const joiningNodeColor = "#00F893";
+  const joiningNodeColor = "#00CBFF";
   const rpcRecipientColor = "#6495ED";
 
   const noSelectedGraphNodeColor = "#EEE";
@@ -154,6 +156,7 @@
 
   function findKClosest(startNodeId, targetId, requesterId) {
     const maxHeap = new Heap(maxHeapComparator);
+    console.log("startNodeId=", startNodeId, "kbuckets=", kBuckets[startNodeId]);
     const buckets = Object.values(kBuckets[startNodeId]);
     for (var i = 0; i < buckets.length; i++) {
       for (var j = 0; j < buckets[i].length; j++) {
@@ -505,9 +508,9 @@
     // Color from node
     var fromNode, toNode, toDataId, toNodes;
     fromNode = getNodeFromDataId(fromDataId);
-    if (fromNode.attr("data-id") !== joinNodeDataId) {
-      fromNode.fill(rpcRecipientColor);
-    }
+    // if (fromNode.attr("data-id") !== joinNodeDataId) {
+    //   fromNode.fill(rpcRecipientColor);
+    // }
 
     // Color to nodes
     toNodes = [];
@@ -515,9 +518,9 @@
       toDataId = alphaContacts[i];
       toNode = getNodeFromDataId(toDataId);
       toNodes.push(toNode);
-      if (toNode.attr("data-id") !== joinNodeDataId) {
-        toNode.fill(rpcRecipientColor);
-      }
+      // if (toNode.attr("data-id") !== joinNodeDataId) {
+      //   toNode.fill(rpcRecipientColor);
+      // }
     }
 
     // Animate RPC's fromNode->toNodes and toNodes->fromNode
@@ -547,7 +550,6 @@
     console.log("top of drawRPCResults: alphaContacts=", alphaContacts);
 
     alphaContacts.forEach(alphaContact => {
-      console.log("in alpha contacts");
       // Get k closest nodes in recipient node
       const kClosest = findKClosest(alphaContact, joinNodeDataId, joinNodeDataId);
       nodesReturned.push(
@@ -676,71 +678,6 @@
   //-----------------
   // Update functions
   //-----------------
-  function updateGraph() {
-    for (var i = 0; i < graphNodes.length; i++) {
-      var node = graphNodes[i];
-      if (selectedNodeId === "") {
-        node.fill(noSelectedGraphNodeColor);
-      } else if (selectedNodeId === node.attr("data-id")) {
-        node.fill(selectedNodeColor);
-      } else {
-        var index = offset;
-        while (
-          index < selectedNodeId.length &&
-          selectedNodeId[index] === node.attr("data-id")[index]
-        ) {
-          index++;
-        }
-        const commonPrefixLength = index - offset;
-        node.fill(colors[commonPrefixLength]);
-
-        if (
-          originNodeId !== "" &&
-          !kBuckets[originNodeId][commonPrefixLength].includes(
-            node.attr("data-id")
-          )
-        ) {
-          node.opacity(0.3);
-        }
-      }
-    }
-
-    for (i = 0; i < graphEdges.length; i++) {
-      var edge = graphEdges[i];
-      var edgeClasses = edge.classes();
-      if (edgeClasses.includes(selectedNodeId)) {
-        var index = offset;
-        var otherNodeId;
-        for (var j = 0; j < edgeClasses.length; j++) {
-          if (
-            edgeClasses[j].startsWith("0b") &&
-            edgeClasses[j] !== selectedNodeId
-          ) {
-            otherNodeId = edgeClasses[j];
-            break;
-          }
-        }
-        while (
-          index < selectedNodeId.length &&
-          selectedNodeId[index] === otherNodeId[index]
-        ) {
-          index++;
-        }
-        const commonPrefixLength = index - offset;
-        edge.stroke({ color: colors[commonPrefixLength], width: 2 });
-
-        if (
-          originNodeId !== "" &&
-          !kBuckets[originNodeId][commonPrefixLength].includes(otherNodeId)
-        ) {
-          edge.opacity(0.3);
-        }
-      } else {
-        edge.stroke({ color: noSelectedLightColor, width: 1 });
-      }
-    }
-  }
-
   function updateTree() {
     var index;
 
@@ -819,6 +756,62 @@
       const node = treeNodes[i];
       if (node.attr("data-id") === idToFind) {
         node.fill(idToFindTreeColor);
+      }
+    }
+  }
+
+  function updateGraph() {
+    console.log("kbuckets for joinNode:", kBuckets[joinNodeDataId]);
+    for (var i = 0; i < graphNodes.length; i++) {
+      var node = graphNodes[i];
+      if (joinNodeDataId === node.attr("data-id")) {
+        node.fill(joiningNodeColor);
+      } else {
+        const commonPrefixLength = getCommonPrefixLength(
+          joinNodeDataId,
+          node.attr("data-id"),
+          offset
+        );
+        node.fill(colors[commonPrefixLength]);
+
+        if (!(commonPrefixLength in kBuckets[joinNodeDataId]) ||
+          !kBuckets[joinNodeDataId][commonPrefixLength].includes(
+            node.attr("data-id")
+          )
+        ) {
+          node.opacity(0.3);
+        }
+      }
+    }
+
+    for (i = 0; i < graphEdges.length; i++) {
+      var edge = graphEdges[i];
+      var edgeClasses = edge.classes();
+      if (edgeClasses.includes(joinNodeDataId)) {
+        var otherNodeId;
+        for (var j = 0; j < edgeClasses.length; j++) {
+          if (
+            edgeClasses[j].startsWith("0b") &&
+            edgeClasses[j] !== joinNodeDataId
+          ) {
+            otherNodeId = edgeClasses[j];
+            break;
+          }
+        }
+        const commonPrefixLength = getCommonPrefixLength(
+          joinNodeDataId,
+          otherNodeId,
+          offset
+        );
+        edge.stroke({ color: colors[commonPrefixLength], width: 2 });
+
+        if (!(commonPrefixLength in kBuckets[joinNodeDataId]) ||
+          !kBuckets[joinNodeDataId][commonPrefixLength].includes(otherNodeId)
+        ) {
+          edge.opacity(0.3);
+        }
+      } else {
+        edge.stroke({ color: noSelectedLightColor, width: 1 });
       }
     }
   }
@@ -924,53 +917,7 @@
   function frame3() {
   	resetVariables();
 
-    // Draw graph with join node included
-    var frameNodes = nodes.slice(0);
-    frameNodes.push(joinNodeId);
-    var nodeColors = {};
-    nodeColors[joinNodeId] = joiningNodeColor;
-  	render_graph(numNodes, frameNodes, nodeColors);
-
-    // Draw kbuckets for join node
-    kBuckets[joinNodeDataId] = {};
-    knownNodeId = 50;
-    knownNodeDataId = binaryPrefix + dec2bin(knownNodeId);
-    const commonPrefixLength = getCommonPrefixLength(
-      joinNodeDataId, knownNodeDataId, offset);
-    kBuckets[joinNodeDataId][commonPrefixLength] = [knownNodeDataId];
-    drawKBuckets("kbuckets", "kbuckets-title", joinNodeDataId, true);
-
-  	render_tree();
-  	populateText("Step 3", `The joining node's k-buckets table is initialized with another known node, <b>${knownNodeDataId} (${knownNodeId})</b>.`);
-  }
-
-  // State that FIND_NODE will be performed
-  function frame4() {
-  	resetVariables();
-
-    // Draw graph with join node included
-    var frameNodes = nodes.slice(0);
-    frameNodes.push(joinNodeId);
-    var nodeColors = {};
-    nodeColors[joinNodeId] = joiningNodeColor;
-  	render_graph(numNodes, frameNodes, nodeColors);
-
-    // Draw kbuckets for join node
-    kBuckets[joinNodeDataId] = {};
-    const commonPrefixLength = getCommonPrefixLength(
-      joinNodeDataId, knownNodeDataId, offset);
-    kBuckets[joinNodeDataId][commonPrefixLength] = [knownNodeDataId];
-    drawKBuckets("kbuckets", "kbuckets-title", joinNodeDataId, true);
-
-  	render_tree();
-  	populateText("Step 4", "The joining node performs <a href='../lookup/index.html'>Lookup</a> on itself in order to fill its k-buckets table.");
-  }
-
-  // Send FIND_NODE RPC to initial contact and receive response
-  function frame5() {
-  	resetVariables();
-
-    // Draw graph with join node included
+    // Draw graph with join node included and single known peer
     var frameNodes = nodes.slice(0);
     frameNodes.push(joinNodeId);
     var nodeColors = {};
@@ -979,17 +926,68 @@
 
     // Draw kbuckets for join node
     updateKBuckets(joinNodeDataId); // no one else knows about joinNode yet
+    kBuckets[joinNodeDataId] = {};
+    knownNodeId = 50;
+    knownNodeDataId = binaryPrefix + dec2bin(knownNodeId);
+    const commonPrefixLength = getCommonPrefixLength(
+      joinNodeDataId, knownNodeDataId, offset);
+    kBuckets[joinNodeDataId][commonPrefixLength] = [knownNodeDataId];
+    drawKBuckets("kbuckets", "kbuckets-title", joinNodeDataId, true);
 
+    updateGraph();
+  	render_tree();
+  	populateText("Step 3", `The joining node's k-buckets table is initialized with another known node, <b>${knownNodeDataId} (${knownNodeId})</b>.`);
+  }
+
+  // State that FIND_NODE will be performed
+  function frame4() {
+  	resetVariables();
+
+    // Draw graph with join node included and single known peer
+    var frameNodes = nodes.slice(0);
+    frameNodes.push(joinNodeId);
+    var nodeColors = {};
+    nodeColors[joinNodeId] = joiningNodeColor;
+  	render_graph(numNodes, frameNodes, nodeColors);
+
+    // Draw kbuckets for join node
+    updateKBuckets(joinNodeDataId); // no one else knows about joinNode yet
+    kBuckets[joinNodeDataId] = {};
+    const commonPrefixLength = getCommonPrefixLength(
+      joinNodeDataId, knownNodeDataId, offset);
+    kBuckets[joinNodeDataId][commonPrefixLength] = [knownNodeDataId];
+    drawKBuckets("kbuckets", "kbuckets-title", joinNodeDataId, true);
+
+    updateGraph();
+  	render_tree();
+  	populateText("Step 4", "The joining node performs <a href='../lookup/index.html'>Lookup</a> on itself in order to fill its k-buckets table.");
+  }
+
+  // Send FIND_NODE RPC to initial contact and receive response
+  function frame5() {
+  	resetVariables();
+
+    // Draw graph with join node included and single known peer
+    var frameNodes = nodes.slice(0);
+    frameNodes.push(joinNodeId);
+    var nodeColors = {};
+    nodeColors[joinNodeId] = joiningNodeColor;
+  	render_graph(numNodes, frameNodes, nodeColors);
+
+    // Draw kbuckets for join node
+    updateKBuckets(joinNodeDataId); // no one else knows about joinNode yet
     kBuckets[joinNodeDataId] = {}; // joinNode only has knownNode in its kbuckets
     const commonPrefixLength = getCommonPrefixLength(
       joinNodeDataId, knownNodeDataId, offset);
     kBuckets[joinNodeDataId][commonPrefixLength] = [knownNodeDataId];
+    console.log("frame5.1: kbuckets=", kBuckets[knownNodeDataId]);
     drawKBuckets("kbuckets", "kbuckets-title", joinNodeDataId, true);
 
     // Send RPC to known node and back
     alphaContacts = [knownNodeDataId];
     drawSendRPC(joinNodeDataId, alphaContacts, true);
 
+    updateGraph();
   	render_tree();
   	populateText("Step 5", `It sends a FIND_NODE RPC for itself, <b>${joinNodeDataId} (${joinNodeId})</b>, to the other node it knows, <b>${knownNodeDataId} (${knownNodeId})</b>, and updates its k-closest nodes shortlist according to the results.`);
   }
@@ -998,7 +996,7 @@
   function frame6() {
   	resetVariables();
 
-    // Draw graph with join node included
+    // Draw graph with join node included and single known peer
     var frameNodes = nodes.slice(0);
     frameNodes.push(joinNodeId);
     var nodeColors = {};
@@ -1008,7 +1006,6 @@
     // Draw kbuckets for join node
     var commonPrefixLength;
     updateKBuckets(joinNodeDataId); // no one else knows about joinNode yet
-
     kBuckets[joinNodeDataId] = {}; // joinNode only knows knownNode
     commonPrefixLength = getCommonPrefixLength(
       joinNodeDataId, knownNodeDataId, offset);
@@ -1035,15 +1032,16 @@
     console.log("alphaContacts:", alphaContacts);
     drawSendRPC(joinNodeDataId, alphaContacts, true);
 
+    updateGraph();
   	render_tree();
   	populateText("Step 6", `The joining node continues sending FIND_NODE RPC's according to the Lookup protocol and updating its k-closest nodes shortlist.`);
   }
 
-  // Refresh buckets with
+  // Refresh buckets
   function frame7() {
     resetVariables();
 
-    // Draw graph with join node included
+    // Draw graph with join node included and colors for kbuckets
     var frameNodes = nodes.slice(0);
     frameNodes.push(joinNodeId);
     var nodeColors = {};
@@ -1064,9 +1062,9 @@
         kBuckets[joinNodeDataId][commonPrefixLength].push(nodeId);
       }
     }
-    console.log("kbuckets:", kBuckets[joinNodeDataId]);
     drawKBuckets("kbuckets", "kbuckets-title", joinNodeDataId, true);
 
+    updateGraph();
   	render_tree();
     populateText("Step 7", `The joining node refreshes all its buckets based on the information it has received.`);
   }
