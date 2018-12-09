@@ -15,7 +15,9 @@
   var kBuckets = {};
   const kBucketRects = {};
 
-  const alphaContacts = [];
+  var roundNum = 1;
+  var alphaContacts = [];
+  const allContactedNodes = [];
   const maxHeapComparator = (x, y) => {
     if (x.distance < y.distance) {
       return 1;
@@ -28,7 +30,7 @@
   const closestNodes = new Heap(maxHeapComparator);
 
   const minFrame = 0;
-  const maxFrame = 6;
+  const maxFrame = 7;
 
   const binaryPrefix = "0b";
   const offset = binaryPrefix.length;
@@ -506,7 +508,7 @@
     return null;
   }
 
-  function drawSendRPC(fromDataId, alphaContacts) {
+  function drawSendRPC(fromDataId) {
     // Color from node
     var fromNode, toNode, toDataId, toNodes;
     fromNode = getNodeFromDataId(fromDataId);
@@ -539,14 +541,15 @@
       rpc.animate({duration: '1500'}).move(endPos.x, endPos.y);
       rpc.animate({duration: '1500'}).move(startPos.x, startPos.y).afterAll(function() {
         this.hide();
-        drawRPCResults(alphaContacts);
+        drawRPCResults();
       });
     }
   }
 
-  function drawRPCResults(alphaContacts) {
+  function drawRPCResults() {
     var nodesReturned = [];
     var kClosestUpdated = false;
+    console.log("top of drawRPCResults: alphaContacts=", alphaContacts);
 
     alphaContacts.forEach(alphaContact => {
       // Get k closest nodes in recipient node
@@ -571,9 +574,9 @@
             closestNodes.push({
               nodeId,
               distance,
-              contacted: false
-                // allContactedNodes.includes(nodeId) ||
-                // alphaContacts.includes(nodeId)
+              contacted:
+                allContactedNodes.includes(nodeId) ||
+                alphaContacts.includes(nodeId)
             });
             kClosestUpdated = true;
           } else if (
@@ -583,9 +586,9 @@
             closestNodes.replace({
               nodeId,
               distance,
-              contacted: false
-                // allContactedNodes.includes(nodeId) ||
-                // alphaContacts.includes(nodeId)
+              contacted:
+                allContactedNodes.includes(nodeId) ||
+                alphaContacts.includes(nodeId)
             });
             kClosestUpdated = true;
           }
@@ -602,8 +605,75 @@
         )}</ul>`
       );
       $("#shortlist-container").show();
+      // updateTree();
+      // updateTreeWithClosestNodes();
+      // updateTreeWithIdToFind();
+      // updateOriginKBuckets(alphaContacts);
+
+      const newAlphaContacts = [];
+
+      if (kClosestUpdated) {
+        // Send FIND_NODE requests to alpha contacts
+        roundNum += 1;
+
+        closestNodes.toArray().forEach(entry => {
+          if (!entry.contacted && newAlphaContacts.length < alpha) {
+            entry.contacted = true;
+            newAlphaContacts.push(entry.nodeId);
+          }
+        });
+
+        allContactedNodes.concat(alphaContacts);
+        alphaContacts = newAlphaContacts;
+
+        if (alphaContacts.length === 0) {
+          displayFinalKContacts();
+        } else {
+          // populateLocalNodeInfo();
+        }
+      } else {
+        allContactedNodes.concat(alphaContacts);
+
+        closestNodes.toArray().forEach(entry => {
+          if (!entry.contacted) {
+            entry.contacted = true;
+            newAlphaContacts.push(entry.nodeId);
+          }
+        });
+
+        allContactedNodes.concat(alphaContacts);
+        alphaContacts = newAlphaContacts;
+
+        $("#local-node-info")
+          .html(`<p style="color: #28a745;"><b>No new nodes were returned that
+        were closer than the previous k-closest.</b></p>`);
+
+        if (alphaContacts.length === 0) {
+          displayFinalKContacts();
+          // $("#send-find-node-button").hide();
+        } else {
+          // populateLocalNodeInfo();
+        }
+      }
       $("#rpc-response-container").show();
     });
+    console.log("bottom of drawRPCResults: alphaContacts=", alphaContacts);
+  }
+
+  function displayFinalKContacts() {
+    $("#final-results-container").html(
+      `<p>The following nodes are the k closest to
+      <b>Target ID ${joinNodeDataId} (${joinNodeId})</b>:</p><ul>${closestNodes
+        .toArray()
+        .map(
+          node =>
+            `<li>${node.nodeId} (${bin2dec(
+              node.nodeId
+            )}) - distance ${getDistance(node.nodeId, idToFind)}</li>`
+        )
+        .join("")}</ul>`
+    );
+    $("#final-results-container").show();
   }
 
   //-----------------
@@ -979,17 +1049,14 @@
     drawKBuckets("kbuckets", "kbuckets-title", joinNodeDataId, true);
 
     // Send RPC to known node and back
-    const alphaContacts = [knownNodeDataId];
-    drawSendRPC(joinNodeDataId, alphaContacts);
-
-    // Draw k closest based on RPC results
-    // drawRPCResults(alphaContacts);
+    alphaContacts = [knownNodeDataId];
+    drawSendRPC(joinNodeDataId);
 
   	render_tree();
   	populateText("Step 5", `It sends a FIND_NODE RPC for itself, <b>${joinNodeDataId} (${joinNodeId})</b>, to the other node it knows, <b>${knownNodeDataId} (${knownNodeId})</b>, and updates its k-closest nodes shortlist according to the results.`);
   }
 
-  // Update k closest based on received response
+  // Keep sending RPC's and updating k closest until complete
   function frame6() {
   	resetVariables();
 
@@ -1008,17 +1075,16 @@
     kBuckets[joinNodeDataId][commonPrefixLength] = [knownNodeDataId];
     drawKBuckets("kbuckets", "kbuckets-title", joinNodeDataId, true);
 
-    // Populate response
-    const alphaContacts = [knownNodeDataId];
-    drawRPCResults(alphaContacts);
+    // Draw RPC to next alpha nodes
+    drawSendRPC(joinNodeDataId);
 
   	render_tree();
-  	populateText("Step 6", `When the joining node receives a response from <b>${knownNodeDataId} (${knownNodeId})</b>, it updates its k-closest nodes shortlist.`);
+  	populateText("Step 6", `The joining node continues sending FIND_NODE RPC's according to the Lookup protocol and updating its k-closest nodes shortlist.`);
   }
 
-  // Keep sending RPC's and updating k closest until complete
+  // Refresh buckets with
   function frame7() {
-  	resetVariables();
+    resetVariables();
 
     // Draw graph with join node included
     var frameNodes = nodes.slice(0);
@@ -1027,32 +1093,12 @@
     nodeColors[joinNodeId] = joiningNodeColor;
   	render_graph(numNodes, frameNodes, nodeColors);
 
-    // Draw RPC from join node to known node
-    // drawSendRPC(joinNodeDataId, ); // TODO START HERE
-
     // Draw kbuckets for join node
-    kBuckets[joinNodeDataId] = {};
-    const commonPrefixLength = getCommonPrefixLength(
-      joinNodeDataId, knownNodeDataId, offset);
-    kBuckets[joinNodeDataId][commonPrefixLength] = [knownNodeDataId];
+    updateKBuckets();
     drawKBuckets("kbuckets", "kbuckets-title", joinNodeDataId, true);
 
   	render_tree();
-  	populateText("Step 7", `The joining node continues sending FIND_NODE RPC's according to the Lookup protocol and updating its k-closest nodes shortlist.`);
-  }
-
-  // Refresh buckets with
-  function frame8() {
-    resetVariables();
-
-    var frameNodes = nodes.slice(0);
-    frameNodes.push(joinNodeId);
-    var nodeColors = {};
-    nodeColors[joinNodeId] = joiningNodeColor;
-  	render_graph(numNodes, frameNodes, nodeColors);
-
-    render_tree();
-    populateText("Step 8", "The joining node refreshes all its buckets with the information it has received.");
+    populateText("Step 7", `The joining node refreshes all its buckets based on the information it has received.`);
   }
 
   function getFrame(i) {
@@ -1063,23 +1109,30 @@
       frame3,
       frame4,
       frame5,
-      frame6
+      frame6,
+      frame7
     ]
     return frames[i];
   }
 
   $("#prev-btn").click(function() {
+    var initialFrame = currentFrame;
     currentFrame = Math.max(minFrame, currentFrame-1);
     console.log("Clicked previous button; currentFrame=", currentFrame);
-    var frame = getFrame(currentFrame);
-    frame();
+    if (initialFrame !== currentFrame) {
+      var frame = getFrame(currentFrame);
+      frame();
+    }
   });
 
   $("#next-btn").click(function() {
+    var initialFrame = currentFrame;
     currentFrame = Math.min(maxFrame, currentFrame+1);
     console.log("Clicked next button; currentFrame=", currentFrame);
-    var frame = getFrame(currentFrame);
-    frame();
+    if (initialFrame !== currentFrame) {
+      var frame = getFrame(currentFrame);
+      frame();
+    }
   });
 
   function initFrame() {
