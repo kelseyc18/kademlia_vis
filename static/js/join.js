@@ -157,7 +157,6 @@
 
   function findKClosest(startNodeId, targetId, requesterId) {
     const maxHeap = new Heap(maxHeapComparator);
-    console.log("startNodeId=", startNodeId, "kbuckets=", kBuckets[startNodeId]);
     const buckets = Object.values(kBuckets[startNodeId]);
     for (var i = 0; i < buckets.length; i++) {
       for (var j = 0; j < buckets[i].length; j++) {
@@ -509,6 +508,11 @@
   }
 
   function drawSendRPC(fromDataId, alphaContacts, drawResults) {
+    if (alphaContacts.length > 0) {
+      $("#prev-btn").prop('disabled', true);
+      $("#next-btn").prop('disabled', true);
+    }
+
     // Color from node
     var fromNode, toNode, toDataId, toNodes;
     fromNode = getNodeFromDataId(fromDataId);
@@ -544,6 +548,8 @@
         if (drawResults) {
           drawRPCResults();
         }
+        $("#prev-btn").prop('disabled', false);
+        $("#next-btn").prop('disabled', false);
       });
     }
   }
@@ -551,7 +557,6 @@
   function drawRPCResults() {
     var nodesReturned = [];
     var kClosestUpdated = false;
-    console.log("top of drawRPCResults: alphaContacts=", alphaContacts);
 
     alphaContacts.forEach(alphaContact => {
       // Get k closest nodes in recipient node
@@ -597,7 +602,6 @@
         }
       });
 
-      console.log("updating html");
       $("#rpc-response-container").html(
         `<p><b>FIND_NODE Responses</b></p><p><i><b>Contact node</b>: k-closest nodes to target</i></p>
         ${nodesReturned.join("")}`
@@ -661,7 +665,6 @@
       $("#local-node-info").show();
       $("#rpc-response-container").show();
     });
-    console.log("bottom of drawRPCResults: alphaContacts=", alphaContacts);
   }
 
   function displayFinalKContacts() {
@@ -795,7 +798,6 @@
   }
 
   function updateGraph() {
-    console.log("kbuckets for joinNode:", kBuckets[joinNodeDataId]);
     for (var i = 0; i < graphNodes.length; i++) {
       var node = graphNodes[i];
       if (joinNodeDataId === node.attr("data-id")) {
@@ -1019,7 +1021,6 @@
     const commonPrefixLength = getCommonPrefixLength(
       joinNodeDataId, knownNodeDataId, offset);
     kBuckets[joinNodeDataId][commonPrefixLength] = [knownNodeDataId];
-    console.log("frame5.1: kbuckets=", kBuckets[knownNodeDataId]);
     drawKBuckets("kbuckets", "kbuckets-title", joinNodeDataId, true);
 
     // Send RPC to known node and back
@@ -1094,7 +1095,6 @@
     kBuckets[joinNodeDataId] = {}; // populate joinNode k-buckets
     for (var i=0; i < finalRoundKBuckets.length; i++) {
       var nodeId = binaryPrefix + dec2bin(finalRoundKBuckets[i]);
-      console.log("adding kbucket:", finalRoundKBuckets[i], nodeId);
       commonPrefixLength = getCommonPrefixLength(
         joinNodeDataId, nodeId, offset);
       if (!(commonPrefixLength in kBuckets[joinNodeDataId])) {
