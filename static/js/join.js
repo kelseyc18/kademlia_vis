@@ -1030,7 +1030,7 @@
   	render_tree();
     updateTree();
     updateTreeWithIdToFind();
-  	populateText("Step 5", `It sends a FIND_NODE RPC for itself, <b>${joinNodeDataId} (${joinNodeId})</b>, to the other node it knows, <b>${knownNodeDataId} (${knownNodeId})</b>, and updates its k-closest nodes shortlist according to the results.`);
+  	populateText("Step 5", `It sends a <code>FIND_NODE</code> RPC for itself, <b>${joinNodeDataId} (${joinNodeId})</b>, to the other node it knows, <b>${knownNodeDataId} (${knownNodeId})</b>, and updates its k-closest nodes shortlist according to the results.`);
   }
 
   // Keep sending RPC's and updating k closest until complete
