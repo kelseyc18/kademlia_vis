@@ -681,7 +681,7 @@
       )}) are:<ul>${closestIds
         .map(nodeId => `<li>${nodeId} (${bin2dec(nodeId)})</li>`)
         .join("")}</ul></p>
-        <p>The ID address, port, and nodeID for these k closest nodes will be sent in the response RPC.</p>`
+        <p>The IP address, port, and nodeID for these k closest nodes will be sent in the response RPC.</p>`
     );
 
     // Show second step when user clicks Next button
