@@ -169,13 +169,16 @@
     n = 15;
     deg = 0;
 
-    while (nodes.length < n) {
-      id = Math.floor(Math.random() * Math.pow(2, 6));
-      if (!nodes.includes(id)) {
-        nodes.push(id);
-      }
-    }
-    nodes.sort((a, b) => a - b);
+    // while (nodes.length < n) {
+    //   id = Math.floor(Math.random() * Math.pow(2, 6));
+    //   if (!nodes.includes(id)) {
+    //     nodes.push(id);
+    //   }
+    // }
+    // nodes.sort((a, b) => a - b);
+    [1, 4, 5, 6, 12, 13, 15, 16, 18, 19, 34, 43, 49, 60, 62].forEach(item =>
+      nodes.push(item)
+    );
 
     draw = SVG("graph");
     graphCanvas = draw;
