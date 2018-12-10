@@ -36,7 +36,7 @@
   const binaryPrefix = "0b";
   const offset = binaryPrefix.length;
 
-  const nodes = [1,11,21,31,32,35,37,46,50,55,58,59,62,63];
+  const nodes = [1, 11, 21, 31, 32, 35, 37, 46, 50, 55, 58, 59, 62, 63];
   const joinNodeId = 28;
   const joinNodeDataId = binaryPrefix + dec2bin(joinNodeId);
   var knownNodeId = 0;
@@ -509,8 +509,8 @@
 
   function drawSendRPC(fromDataId, alphaContacts, drawResults) {
     if (alphaContacts.length > 0) {
-      $("#prev-btn").prop('disabled', true);
-      $("#next-btn").prop('disabled', true);
+      $("#prev-btn").prop("disabled", true);
+      $("#next-btn").prop("disabled", true);
     }
 
     // Color from node
@@ -542,15 +542,18 @@
       var rpc = draw.circle(10);
       rpc.fill(rpcMsgColor);
       rpc.cx(startPos.x).cy(startPos.y);
-      rpc.animate({duration: '1500'}).move(endPos.x, endPos.y);
-      rpc.animate({duration: '1500'}).move(startPos.x, startPos.y).afterAll(function() {
-        this.hide();
-        if (drawResults) {
-          drawRPCResults();
-        }
-        $("#prev-btn").prop('disabled', false);
-        $("#next-btn").prop('disabled', false);
-      });
+      rpc.animate({ duration: "1500" }).move(endPos.x, endPos.y);
+      rpc
+        .animate({ duration: "1500" })
+        .move(startPos.x, startPos.y)
+        .afterAll(function() {
+          this.hide();
+          if (drawResults) {
+            drawRPCResults();
+          }
+          $("#prev-btn").prop("disabled", false);
+          $("#next-btn").prop("disabled", false);
+        });
     }
   }
 
@@ -560,11 +563,15 @@
 
     alphaContacts.forEach(alphaContact => {
       // Get k closest nodes in recipient node
-      const kClosest = findKClosest(alphaContact, joinNodeDataId, joinNodeDataId);
+      const kClosest = findKClosest(
+        alphaContact,
+        joinNodeDataId,
+        joinNodeDataId
+      );
       nodesReturned.push(
-        `<p><b>${alphaContact} (${bin2dec(
-          alphaContact
-        )})</b>: ${idsToString(kClosest)}</p>`
+        `<p><b>${alphaContact} (${bin2dec(alphaContact)})</b>: ${idsToString(
+          kClosest
+        )}</p>`
       );
 
       // Update k-closest local state on origin node
@@ -738,7 +745,7 @@
       // populate kbuckets for nodeId
       for (var j = 0; j < graphNodes.length; j++) {
         otherNodeId = graphNodes[j].attr("data-id");
-        if ((otherNodeId === nodeId) || (otherNodeId === ignoreNodeId)) {
+        if (otherNodeId === nodeId || otherNodeId === ignoreNodeId) {
           continue;
         }
 
@@ -810,7 +817,8 @@
         );
         node.fill(colors[commonPrefixLength]);
 
-        if (!(commonPrefixLength in kBuckets[joinNodeDataId]) ||
+        if (
+          !(commonPrefixLength in kBuckets[joinNodeDataId]) ||
           !kBuckets[joinNodeDataId][commonPrefixLength].includes(
             node.attr("data-id")
           )
@@ -841,7 +849,8 @@
         );
         edge.stroke({ color: colors[commonPrefixLength], width: 2 });
 
-        if (!(commonPrefixLength in kBuckets[joinNodeDataId]) ||
+        if (
+          !(commonPrefixLength in kBuckets[joinNodeDataId]) ||
           !kBuckets[joinNodeDataId][commonPrefixLength].includes(otherNodeId)
         ) {
           edge.opacity(0.3);
@@ -856,26 +865,26 @@
   // Frame functions
   //-----------------
   function populateText(step_text, sim_text) {
-  	const stepTextDiv = document.getElementById("step-num");
-  	var stepText = "<p><b>" + step_text + "</b></p>";
-  	stepTextDiv.innerHTML = stepText;
+    const stepTextDiv = document.getElementById("step-num");
+    var stepText = "<p><b>" + step_text + "</b></p>";
+    stepTextDiv.innerHTML = stepText;
 
-  	const simTextDiv = document.getElementById("simulation-text");
-  	var simText = "<p>" + sim_text + "</p>";
-  	simTextDiv.innerHTML = simText;
+    const simTextDiv = document.getElementById("simulation-text");
+    var simText = "<p>" + sim_text + "</p>";
+    simTextDiv.innerHTML = simText;
   }
 
   function resetVariables() {
-  	selectedNodeId = "";
-  	originNodeId = "";
-  	idToFind = "";
-  	graphSVGDoc;
-  	treeSVGDoc;
-  	graphNodes = [];
-  	graphEdges = [];
-  	treeNodes = [];
-  	treeEdges = [];
-  	kBuckets = {};
+    selectedNodeId = "";
+    originNodeId = "";
+    idToFind = "";
+    graphSVGDoc;
+    treeSVGDoc;
+    graphNodes = [];
+    graphEdges = [];
+    treeNodes = [];
+    treeEdges = [];
+    kBuckets = {};
     alphaContacts = [];
     allContactedNodes = [];
     closestNodes = new Heap(maxHeapComparator);
@@ -888,25 +897,28 @@
   }
 
   function frame0() {
-  	resetVariables();
+    resetVariables();
 
     // Draw graph with joining node on side
-  	render_graph(numNodes-1, nodes, {});
+    render_graph(numNodes - 1, nodes, {});
     var draw = graphSVGDoc;
     var circle = draw.circle(nodeSize);
     circle.fill(joiningNodeColor);
     circle.cx(nodeSize).cy(nodeSize);
 
-  	render_tree();
-  	populateText("Join Simulation", "Press Next to begin stepping through Join simulation.");
+    render_tree();
+    populateText(
+      "Join Simulation",
+      "Press Next to begin stepping through Join simulation."
+    );
   }
 
   // Add node ID to joining node
   function frame1() {
-  	resetVariables();
+    resetVariables();
 
     // Draw graph with joining node on side with nodeID
-  	render_graph(numNodes-1, nodes, {});
+    render_graph(numNodes - 1, nodes, {});
     var draw = graphSVGDoc;
     var circle = draw.circle(nodeSize);
     circle.fill(joiningNodeColor);
@@ -932,35 +944,38 @@
     label2.attr("data-id", dataId);
     label2.attr("font-family", "Roboto");
 
-  	render_tree();
-  	populateText("Step 1", `The joining node is assigned a nodeID, <b>${joinNodeDataId} (${joinNodeId})</b>...`);
+    render_tree();
+    populateText(
+      "Step 1",
+      `The joining node is assigned a nodeID, <b>${joinNodeDataId} (${joinNodeId})</b>...`
+    );
   }
 
   // Add joining node to graph
   function frame2() {
-  	resetVariables();
+    resetVariables();
 
     // Draw graph with join node included
     var frameNodes = nodes.slice(0);
     frameNodes.push(joinNodeId);
     var nodeColors = {};
     nodeColors[joinNodeId] = joiningNodeColor;
-  	render_graph(numNodes, frameNodes, nodeColors);
+    render_graph(numNodes, frameNodes, nodeColors);
 
-  	render_tree();
-  	populateText("Step 2", `...and it is added to the node graph.`);
+    render_tree();
+    populateText("Step 2", `...and it is added to the node graph.`);
   }
 
   // Initialize k-buckets for joining node
   function frame3() {
-  	resetVariables();
+    resetVariables();
 
     // Draw graph with join node included and single known peer
     var frameNodes = nodes.slice(0);
     frameNodes.push(joinNodeId);
     var nodeColors = {};
     nodeColors[joinNodeId] = joiningNodeColor;
-  	render_graph(numNodes, frameNodes, nodeColors);
+    render_graph(numNodes, frameNodes, nodeColors);
 
     // Draw kbuckets for join node
     updateKBuckets(joinNodeDataId); // no one else knows about joinNode yet
@@ -968,58 +983,73 @@
     knownNodeId = 50;
     knownNodeDataId = binaryPrefix + dec2bin(knownNodeId);
     const commonPrefixLength = getCommonPrefixLength(
-      joinNodeDataId, knownNodeDataId, offset);
+      joinNodeDataId,
+      knownNodeDataId,
+      offset
+    );
     kBuckets[joinNodeDataId][commonPrefixLength] = [knownNodeDataId];
     drawKBuckets("kbuckets", "kbuckets-title", joinNodeDataId, true);
 
     updateGraph();
-  	render_tree();
+    render_tree();
     updateTree();
-  	populateText("Step 3", `The joining node's k-buckets table is initialized with another known node, <b>${knownNodeDataId} (${knownNodeId})</b>.`);
+    populateText(
+      "Step 3",
+      `The joining node's k-buckets table is initialized with another known node, <b>${knownNodeDataId} (${knownNodeId})</b>.`
+    );
   }
 
   // State that FIND_NODE will be performed
   function frame4() {
-  	resetVariables();
+    resetVariables();
 
     // Draw graph with join node included and single known peer
     var frameNodes = nodes.slice(0);
     frameNodes.push(joinNodeId);
     var nodeColors = {};
     nodeColors[joinNodeId] = joiningNodeColor;
-  	render_graph(numNodes, frameNodes, nodeColors);
+    render_graph(numNodes, frameNodes, nodeColors);
 
     // Draw kbuckets for join node
     updateKBuckets(joinNodeDataId); // no one else knows about joinNode yet
     kBuckets[joinNodeDataId] = {};
     const commonPrefixLength = getCommonPrefixLength(
-      joinNodeDataId, knownNodeDataId, offset);
+      joinNodeDataId,
+      knownNodeDataId,
+      offset
+    );
     kBuckets[joinNodeDataId][commonPrefixLength] = [knownNodeDataId];
     drawKBuckets("kbuckets", "kbuckets-title", joinNodeDataId, true);
 
     updateGraph();
-  	render_tree();
+    render_tree();
     updateTree();
     updateTreeWithIdToFind();
-  	populateText("Step 4", "The joining node performs <a href='../lookup/index.html'>Lookup</a> on itself in order to fill its k-buckets table.");
+    populateText(
+      "Step 4",
+      "The joining node performs <a href='../lookup/index.html'>Lookup</a> on itself in order to fill its k-buckets table."
+    );
   }
 
   // Send FIND_NODE RPC to initial contact and receive response
   function frame5() {
-  	resetVariables();
+    resetVariables();
 
     // Draw graph with join node included and single known peer
     var frameNodes = nodes.slice(0);
     frameNodes.push(joinNodeId);
     var nodeColors = {};
     nodeColors[joinNodeId] = joiningNodeColor;
-  	render_graph(numNodes, frameNodes, nodeColors);
+    render_graph(numNodes, frameNodes, nodeColors);
 
     // Draw kbuckets for join node
     updateKBuckets(joinNodeDataId); // no one else knows about joinNode yet
     kBuckets[joinNodeDataId] = {}; // joinNode only has knownNode in its kbuckets
     const commonPrefixLength = getCommonPrefixLength(
-      joinNodeDataId, knownNodeDataId, offset);
+      joinNodeDataId,
+      knownNodeDataId,
+      offset
+    );
     kBuckets[joinNodeDataId][commonPrefixLength] = [knownNodeDataId];
     drawKBuckets("kbuckets", "kbuckets-title", joinNodeDataId, true);
 
@@ -1028,55 +1058,64 @@
     drawSendRPC(joinNodeDataId, alphaContacts, true);
 
     updateGraph();
-  	render_tree();
+    render_tree();
     updateTree();
     updateTreeWithIdToFind();
-  	populateText("Step 5", `It sends a <code>FIND_NODE</code> RPC for itself, <b>${joinNodeDataId} (${joinNodeId})</b>, to the other node it knows, <b>${knownNodeDataId} (${knownNodeId})</b>, and updates its k-closest nodes shortlist according to the results.`);
+    populateText(
+      "Step 5",
+      `It sends a <code>FIND_NODE</code> RPC for itself, <b>${joinNodeDataId} (${joinNodeId})</b>, to the other node it knows, <b>${knownNodeDataId} (${knownNodeId})</b>, and updates its k-closest nodes shortlist according to the results.`
+    );
   }
 
   // Keep sending RPC's and updating k closest until complete
   function frame6() {
-  	resetVariables();
+    resetVariables();
 
     // Draw graph with join node included and single known peer
     var frameNodes = nodes.slice(0);
     frameNodes.push(joinNodeId);
     var nodeColors = {};
     nodeColors[joinNodeId] = joiningNodeColor;
-  	render_graph(numNodes, frameNodes, nodeColors);
+    render_graph(numNodes, frameNodes, nodeColors);
 
     // Draw kbuckets for join node
     var commonPrefixLength;
     updateKBuckets(joinNodeDataId); // no one else knows about joinNode yet
     kBuckets[joinNodeDataId] = {}; // joinNode only knows knownNode
     commonPrefixLength = getCommonPrefixLength(
-      joinNodeDataId, knownNodeDataId, offset);
+      joinNodeDataId,
+      knownNodeDataId,
+      offset
+    );
     kBuckets[joinNodeDataId][commonPrefixLength] = [knownNodeDataId];
     drawKBuckets("kbuckets", "kbuckets-title", joinNodeDataId, true);
 
     // Draw RPC to next alpha nodes
-    for (var i=0; i < roundTwoClosestNodes.length; i++) {
+    for (var i = 0; i < roundTwoClosestNodes.length; i++) {
       var nodeId = binaryPrefix + dec2bin(roundTwoClosestNodes[i]);
       const distance = getDistance(nodeId, joinNodeDataId);
       closestNodes.push({
         nodeId,
         distance,
-        contacted:false
+        contacted: false
       });
     }
-    for (var i=0; i < roundTwoContactedNodes.length; i++) {
+    for (var i = 0; i < roundTwoContactedNodes.length; i++) {
       allContactedNodes.push(binaryPrefix + dec2bin(roundTwoContactedNodes[i]));
     }
-    for (var i=0; i < roundTwoAlphaContacts.length; i++) {
+    for (var i = 0; i < roundTwoAlphaContacts.length; i++) {
       alphaContacts.push(binaryPrefix + dec2bin(roundTwoAlphaContacts[i]));
     }
     drawSendRPC(joinNodeDataId, alphaContacts, true);
 
     updateGraph();
-  	render_tree();
+    render_tree();
     updateTree();
     updateTreeWithIdToFind();
-  	populateText("Step 6", `The joining node continues sending FIND_NODE RPC's according to the Lookup protocol and updating its k-closest nodes shortlist.`);
+    populateText(
+      "Step 6",
+      `The joining node continues sending FIND_NODE RPC's according to the Lookup protocol and updating its k-closest nodes shortlist.`
+    );
   }
 
   // Refresh buckets
@@ -1088,15 +1127,18 @@
     frameNodes.push(joinNodeId);
     var nodeColors = {};
     nodeColors[joinNodeId] = joiningNodeColor;
-  	render_graph(numNodes, frameNodes, nodeColors);
+    render_graph(numNodes, frameNodes, nodeColors);
 
     // Draw kbuckets for join node
     var commonPrefixLength;
     kBuckets[joinNodeDataId] = {}; // populate joinNode k-buckets
-    for (var i=0; i < finalRoundKBuckets.length; i++) {
+    for (var i = 0; i < finalRoundKBuckets.length; i++) {
       var nodeId = binaryPrefix + dec2bin(finalRoundKBuckets[i]);
       commonPrefixLength = getCommonPrefixLength(
-        joinNodeDataId, nodeId, offset);
+        joinNodeDataId,
+        nodeId,
+        offset
+      );
       if (!(commonPrefixLength in kBuckets[joinNodeDataId])) {
         kBuckets[joinNodeDataId][commonPrefixLength] = [nodeId];
       } else {
@@ -1105,55 +1147,61 @@
     }
     drawKBuckets("kbuckets", "kbuckets-title", joinNodeDataId, true);
 
-    for (var i=0; i < roundTwoClosestNodes.length; i++) {
+    for (var i = 0; i < roundTwoClosestNodes.length; i++) {
       var nodeId = binaryPrefix + dec2bin(roundTwoClosestNodes[i]);
       const distance = getDistance(nodeId, joinNodeDataId);
       closestNodes.push({
         nodeId,
         distance,
-        contacted:false
+        contacted: false
       });
     }
 
     updateGraph();
-  	render_tree();
+    render_tree();
     updateTree();
     updateTreeWithIdToFind();
     updateTreeWithClosestNodes();
-    populateText("Step 7", `The joining node refreshes all its buckets based on the information it has received. It has now completed the Join protocol.`);
+    populateText(
+      "Step 7",
+      `The joining node refreshes all its buckets based on the information it has received. It has now completed the Join protocol.`
+    );
   }
 
   function getFrame(i) {
-    frames = [
-      frame0,
-      frame1,
-      frame2,
-      frame3,
-      frame4,
-      frame5,
-      frame6,
-      frame7
-    ]
+    frames = [frame0, frame1, frame2, frame3, frame4, frame5, frame6, frame7];
     return frames[i];
   }
 
   $("#prev-btn").click(function() {
     var initialFrame = currentFrame;
-    currentFrame = Math.max(minFrame, currentFrame-1);
+    currentFrame = Math.max(minFrame, currentFrame - 1);
     console.log("Clicked previous button; currentFrame=", currentFrame);
     if (initialFrame !== currentFrame) {
       var frame = getFrame(currentFrame);
       frame();
     }
+    if (currentFrame < maxFrame) {
+      $("#next-btn").show();
+    }
+    if (currentFrame === 0) {
+      $("#prev-btn").hide();
+    }
   });
 
   $("#next-btn").click(function() {
     var initialFrame = currentFrame;
-    currentFrame = Math.min(maxFrame, currentFrame+1);
+    currentFrame = Math.min(maxFrame, currentFrame + 1);
     console.log("Clicked next button; currentFrame=", currentFrame);
     if (initialFrame !== currentFrame) {
       var frame = getFrame(currentFrame);
       frame();
+    }
+    if (currentFrame === maxFrame) {
+      $("#next-btn").hide();
+    }
+    if (currentFrame > 0) {
+      $("#prev-btn").show();
     }
   });
 
@@ -1165,5 +1213,4 @@
 
   // Initialize the Join simulation.
   initFrame();
-
 })(this);
