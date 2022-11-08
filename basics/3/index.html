@@ -45,7 +45,7 @@
             <h1 id="basics-header">Distances for K-Buckets</h1>
             <div id="basics-content">
               <p>Each Kademlia node keeps a list of <i>n</i> <b>k-buckets</b>, where <i>n</i> is the number of bits in a key/node ID.</i></p>
-              <p>For <i>i</i> &lt;= 0 &lt; <i>n</i>, the <i>i</i>-th k-bucket for a node contains <b>up to <i>k</i> (IP address, UDP port, Node ID) triples for nodes of distance between 2<sup><i>i</i></sup> and 2<sup><i>i+1</i></sup> from itself</b>.</p>
+              <p>For 0 &lt;= <i>i</i> &lt; <i>n</i>, the <i>i</i>-th k-bucket for a node contains <b>up to <i>k</i> (IP address, UDP port, Node ID) triples for nodes of distance between 2<sup><i>i</i></sup> and 2<sup><i>i+1</i></sup> from itself</b>.</p>
               <p>In other words, the nodes in <code>originNode</code>'s <i>i</i>-th k-bucket have IDs such that <code>longestCommonPrefixLength(originNode.id, kbucketNode.id) = i</code>.</p>
             </div>
             <div id="instructions-container">
